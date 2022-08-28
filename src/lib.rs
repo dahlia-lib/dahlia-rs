@@ -145,53 +145,50 @@ impl Dahlia {
             let r = color[0].to_string();
             let g = color[1].to_string();
             let b = color[2].to_string();
-            return template
+            template
                 .replacen("{}", &r, 1)
                 .replacen("{}", &g, 1)
                 .replacen("{}", &b, 1)
-                .to_string();
+        } else if FORMATTERS.contains_key(code.as_str()) {
+            let template = formats.get(&3u8).unwrap();
+            let value = FORMATTERS.get(code.as_str()).unwrap();
+            template.replace("{}", &value.to_string())
         } else {
-            if FORMATTERS.contains_key(code.as_str()) {
-                let template = formats.get(&3u8).unwrap();
-                let value = FORMATTERS.get(code.as_str()).unwrap();
-                return template.replace("{}", &value.to_string());
+            let template = formats.get(&self.depth.to_u8()).unwrap();
+            if self.depth.to_u8() == 24u8 {
+                let values = COLORS_24BIT.get(code.as_str()).unwrap();
+                let r = values[0].to_string();
+                let g = values[1].to_string();
+                let b = values[2].to_string();
+                template
+                    .replacen("{}", &r, 1)
+                    .replacen("{}", &g, 1)
+                    .replacen("{}", &b, 1)
             } else {
-                let template = formats.get(&self.depth.to_u8()).unwrap();
-                if self.depth.to_u8() == 24u8 {
-                    let values = COLORS_24BIT.get(code.as_str()).unwrap();
-                    let r = values[0].to_string();
-                    let g = values[1].to_string();
-                    let b = values[2].to_string();
-                    template
-                        .replacen("{}", &r, 1)
-                        .replacen("{}", &g, 1)
-                        .replacen("{}", &b, 1)
+                let color_map = match self.depth {
+                    Depth::Low => COLORS_3BIT,
+                    Depth::Medium => COLORS_8BIT,
+                    _ => phf_map! {},
+                };
+                let value = if self.depth.to_u8() == 3 {
+                    *color_map.get(&code).unwrap()
                 } else {
-                    let color_map = match self.depth {
-                        Depth::Low => COLORS_3BIT,
-                        Depth::Medium => COLORS_8BIT,
-                        _ => phf_map! {},
-                    };
-                    let value = if self.depth.to_u8() == 3 {
-                        *color_map.get(&code).unwrap()
-                    } else {
-                        color_map.get(&code).unwrap() + 10 * (bg as u8)
-                    };
-                    return template.replace("{}", &value.to_string());
-                }
+                    color_map.get(&code).unwrap() + 10 * (bg as u8)
+                };
+                template.replace("{}", &value.to_string())
             }
         }
     }
 }
 
-fn find_codes(string: &String) -> Vec<(String, bool, String)> {
+fn find_codes(string: &str) -> Vec<(String, bool, String)> {
     let patterns = [
         re(r"&(~?)([0-9a-gl-or])"),
         re(r"&(~?)\[#([0-9a-fA-F]{6})\]"),
     ];
     let mut codes = vec![];
     for pattern in patterns {
-        for cap in pattern.captures(string.as_str()).iter() {
+        if let Some(cap) = pattern.captures(string) {
             codes.push((
                 cap.get(0).map_or("", |m| m.as_str()).to_string(),
                 cap.get(1).map_or("", |m| m.as_str()) == "~",
@@ -206,7 +203,7 @@ fn re(string: &str) -> Regex {
     Regex::new(string).unwrap()
 }
 
-fn find_ansi_codes(string: &String) -> Vec<String> {
+fn find_ansi_codes(string: &str) -> Vec<String> {
     let patterns = [
         re(r"\x1b\[(\d+)m"),
         re(r"\x1b\[(?:3|4)8;5;(\d+)m"),
@@ -214,7 +211,7 @@ fn find_ansi_codes(string: &String) -> Vec<String> {
     ];
     let mut codes = vec![];
     for pattern in patterns {
-        for mat in pattern.find_iter(string.as_str()) {
+        for mat in pattern.find_iter(string) {
             codes.push(mat.as_str().to_string());
         }
     }
