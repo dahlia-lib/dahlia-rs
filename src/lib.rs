@@ -1,6 +1,5 @@
 use phf::{phf_map, Map};
 use regex::Regex;
-// no need to import primitives
 use std::io::{stdin, stdout, Write};
 
 use lazy_static::lazy_static;
@@ -13,7 +12,6 @@ pub enum Depth {
 }
 
 impl Depth {
-    // struct implements Copy so no need for reference
     fn to_u8(self) -> u8 {
         match self {
             Depth::Low => 3u8,
@@ -23,7 +21,6 @@ impl Depth {
     }
 }
 
-// saves the conversion down the line
 const FORMATTERS: Map<&str, &str> = phf_map! {
     "l" => "1",
     "m" => "9",
@@ -114,7 +111,6 @@ impl Dahlia {
         Dahlia { depth, no_reset }
     }
 
-    // you can use mut directly in the parameters
     pub fn convert(&self, mut string: String) -> String {
         if !(string.ends_with("&r") || self.no_reset) {
             string += "&r";
@@ -128,7 +124,6 @@ impl Dahlia {
 
     pub fn input(&self, prompt: String) -> String {
         print!("{}", self.convert(prompt));
-        // good practice to handle errors at least with except
         stdout().flush().expect("Can't write to stdout");
 
         let mut inp = String::new();
@@ -143,30 +138,24 @@ impl Dahlia {
             FORMAT_TEMPLATES
         };
 
-        // RGB
         if code.len() == 6 {
-            // try to avoid vectors if you can do with just arrays
             let color =
                 [0, 2, 4].map(|i| u8::from_str_radix(&code[i..i + 2], 16).unwrap().to_string());
 
-            // Rust has array destructuring
             let [r, g, b] = color;
 
             let template = formats.get(&24u8).unwrap();
             template
-                // maybe more of an opinion, but this looks better
                 .replace("{r}", &r)
                 .replace("{g}", &g)
                 .replace("{b}", &b)
         } else if let Some(value) = FORMATTERS.get(&code) {
-            // if let is great
             let template = formats.get(&3u8).unwrap();
 
             template.replace("{}", value)
         } else {
             let template = formats.get(&self.depth.to_u8()).unwrap();
 
-            // more clear - no magic numbers
             if self.depth == Depth::High {
                 let values = COLORS_24BIT.get(&code).unwrap();
                 let [r, g, b] = values;
@@ -179,14 +168,12 @@ impl Dahlia {
                 let color_map = match self.depth {
                     Depth::Low => COLORS_3BIT,
                     Depth::Medium => COLORS_8BIT,
-                    _ => unreachable!(), // this shouldn't ever happen
+                    _ => unreachable!(),
                 };
 
-                // simpler way to express the intention
                 let mut value = color_map.get(&code).unwrap().to_string();
 
                 if self.depth == Depth::Medium && bg {
-                    // only downside to storing codes as strings
                     value = (value.parse::<u8>().unwrap() + 10).to_string()
                 };
 
@@ -195,7 +182,7 @@ impl Dahlia {
         }
     }
 
-    /// Return string with all the possible formatting
+    /// Return string with all the possible formatting options
     pub fn test(&self) -> String {
         self.convert(
             "0123456789abcdefg"
@@ -211,13 +198,12 @@ fn re(string: &str) -> Regex {
     Regex::new(string).unwrap()
 }
 
-// a way to make a const out of (by Rust's definition) non-const code
 lazy_static! {
     static ref CODE_REGEXES: [Regex; 2] = [
         re(r"&(~?)([0-9a-gl-or])"),
         re(r"&(~?)\[#([0-9a-fA-F]{6})\]"),
     ];
-    static ref ANSII_REGEXES: [Regex; 3] = [
+    static ref ANSI_REGEXES: [Regex; 3] = [
         re(r"\x1b\[(\d+)m"),
         re(r"\x1b\[(?:3|4)8;5;(\d+)m"),
         re(r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m"),
@@ -246,9 +232,8 @@ pub fn clean(mut string: String) -> String {
     string
 }
 
-// idk how to explain this, just make it simple
 pub fn clean_ansi(mut string: String) -> String {
-    for pattern in ANSII_REGEXES.iter() {
+    for pattern in ANSI_REGEXES.iter() {
         string = pattern.replace_all(&string, "").to_string()
     }
 
