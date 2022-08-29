@@ -182,14 +182,27 @@ impl Dahlia {
     }
 }
 
-fn find_codes(string: &str) -> Vec<(String, bool, String)> {
-    let patterns = [
+fn re(string: &str) -> Regex {
+    Regex::new(string).unwrap()
+}
+
+// a way to make a const out of (by Rust's definition) non-const code
+lazy_static! {
+    static ref CODE_REGEXES: [Regex; 2] = [
         re(r"&(~?)([0-9a-gl-or])"),
         re(r"&(~?)\[#([0-9a-fA-F]{6})\]"),
     ];
+    static ref ANSII_REGEXES: [Regex; 3] = [
+        re(r"\x1b\[(\d+)m"),
+        re(r"\x1b\[(?:3|4)8;5;(\d+)m"),
+        re(r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m"),
+    ];
+}
+
+fn find_codes(string: &str) -> Vec<(String, bool, String)> {
     let mut codes = vec![];
-    for pattern in patterns {
-        if let Some(cap) = pattern.captures(string) {
+    for pattern in CODE_REGEXES.iter() {
+        for cap in pattern.captures_iter(string) {
             codes.push((
                 cap.get(0).map_or("", |m| m.as_str()).to_string(),
                 cap.get(1).map_or("", |m| m.as_str()) == "~",
@@ -200,37 +213,19 @@ fn find_codes(string: &str) -> Vec<(String, bool, String)> {
     codes
 }
 
-fn re(string: &str) -> Regex {
-    Regex::new(string).unwrap()
-}
-
-fn find_ansi_codes(string: &str) -> Vec<String> {
-    let patterns = [
-        re(r"\x1b\[(\d+)m"),
-        re(r"\x1b\[(?:3|4)8;5;(\d+)m"),
-        re(r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m"),
-    ];
-    let mut codes = vec![];
-    for pattern in patterns {
-        for mat in pattern.find_iter(string) {
-            codes.push(mat.as_str().to_string());
-        }
+pub fn clean(mut string: String) -> String {
+    for pattern in CODE_REGEXES.iter() {
+        string = pattern.replace_all(&string, "").to_string()
     }
-    codes
-}
 
-pub fn clean(string: String) -> String {
-    let mut string = string;
-    for (code, _, _) in find_codes(&string) {
-        string = string.replacen(&code, "", 1);
-    }
     string
 }
 
-pub fn clean_ansi(string: String) -> String {
-    let mut string = string;
-    for ansi_code in find_ansi_codes(&string) {
-        string = string.replacen(&ansi_code, "", 1);
+// idk how to explain this, just make it simple
+pub fn clean_ansi(mut string: String) -> String {
+    for pattern in ANSII_REGEXES.iter() {
+        string = pattern.replace_all(&string, "").to_string()
     }
+
     string
 }
