@@ -1,8 +1,11 @@
 use phf::{phf_map, Map};
 use regex::Regex;
-use std::i64;
+// no need to import primitives
 use std::io::{stdin, stdout, Write};
 
+use lazy_static::lazy_static;
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Depth {
     Low,
     Medium,
@@ -10,7 +13,8 @@ pub enum Depth {
 }
 
 impl Depth {
-    fn to_u8(&self) -> u8 {
+    // struct implements Copy so no need for reference
+    fn to_u8(self) -> u8 {
         match self {
             Depth::Low => 3u8,
             Depth::Medium => 8u8,
@@ -19,84 +23,85 @@ impl Depth {
     }
 }
 
-const FORMATTERS: Map<&str, u8> = phf_map! {
-    "l" => 1,
-    "m" => 9,
-    "n" => 4,
-    "o" => 3,
-    "r" => 0
+// saves the conversion down the line
+const FORMATTERS: Map<&str, &str> = phf_map! {
+    "l" => "1",
+    "m" => "9",
+    "n" => "4",
+    "o" => "3",
+    "r" => "0"
 };
 
-const COLORS_3BIT: Map<&str, u8> = phf_map! {
-    "0" => 30,
-    "1" => 34,
-    "2" => 32,
-    "3" => 36,
-    "4" => 31,
-    "5" => 35,
-    "6" => 33,
-    "7" => 37,
-    "8" => 30,
-    "9" => 34,
-    "a" => 32,
-    "b" => 34,
-    "c" => 31,
-    "d" => 35,
-    "e" => 33,
-    "f" => 37,
-    "g" => 33
+const COLORS_3BIT: Map<&str, &str> = phf_map! {
+    "0" => "30",
+    "1" => "34",
+    "2" => "32",
+    "3" => "36",
+    "4" => "31",
+    "5" => "35",
+    "6" => "33",
+    "7" => "37",
+    "8" => "30",
+    "9" => "34",
+    "a" => "32",
+    "b" => "34",
+    "c" => "31",
+    "d" => "35",
+    "e" => "33",
+    "f" => "37",
+    "g" => "33"
 };
 
-const COLORS_8BIT: Map<&str, u8> = phf_map! {
-    "0" => 0,
-    "1" => 19,
-    "2" => 34,
-    "3" => 37,
-    "4" => 124,
-    "5" => 127,
-    "6" => 214,
-    "7" => 248,
-    "8" => 240,
-    "9" => 147,
-    "a" => 83,
-    "b" => 87,
-    "c" => 203,
-    "d" => 207,
-    "e" => 227,
-    "f" => 15,
-    "g" => 184
+const COLORS_8BIT: Map<&str, &str> = phf_map! {
+    "0" => "0",
+    "1" => "19",
+    "2" => "34",
+    "3" => "37",
+    "4" => "124",
+    "5" => "127",
+    "6" => "214",
+    "7" => "248",
+    "8" => "240",
+    "9" => "147",
+    "a" => "83",
+    "b" => "87",
+    "c" => "203",
+    "d" => "207",
+    "e" => "227",
+    "f" => "15",
+    "g" => "184"
 };
 
-const COLORS_24BIT: Map<&str, [u8; 3]> = phf_map! {
-    "0" => [0, 0, 0],
-    "1" => [0, 0, 170],
-    "2" => [0, 170, 0],
-    "3" => [0, 170, 170],
-    "4" => [170, 0, 0],
-    "5" => [170, 0, 170],
-    "6" => [255, 170, 0],
-    "7" => [170, 170, 170],
-    "8" => [85, 85, 85],
-    "9" => [85, 85, 255],
-    "a" => [85, 255, 85],
-    "b" => [85, 255, 255],
-    "c" => [255, 85, 85],
-    "d" => [255, 85, 255],
-    "e" => [255, 255, 85],
-    "f" => [255, 255, 255],
-    "g" => [221, 214, 5]
+const COLORS_24BIT: Map<&str, [&str; 3]> = phf_map! {
+    "0" => ["0", "0", "0"],
+    "1" => ["0", "0", "170"],
+    "2" => ["0", "170", "0"],
+    "3" => ["0", "170", "170"],
+    "4" => ["170", "0", "0"],
+    "5" => ["170", "0", "170"],
+    "6" => ["255", "170", "0"],
+    "7" => ["170", "170", "170"],
+    "8" => ["85", "85", "85"],
+    "9" => ["85", "85", "255"],
+    "a" => ["85", "255", "85"],
+    "b" => ["85", "255", "255"],
+    "c" => ["255", "85", "85"],
+    "d" => ["255", "85", "255"],
+    "e" => ["255", "255", "85"],
+    "f" => ["255", "255", "255"],
+    "g" => ["221", "214", "5"]
 };
 
 const FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
     3u8 => "\x1b[{}m",
     8u8 => "\x1b[38;5;{}m",
-    24u8 => "\x1b[38;2;{};{};{}m"
+    24u8 => "\x1b[38;2;{r};{g};{b}m"
 };
 
 const BG_FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
     3u8 => "\x1b[{}m",
     8u8 => "\x1b[48;5;{}m",
-    24u8 => "\x1b[48;2;{};{};{}m"
+    24u8 => "\x1b[48;2;{r};{g};{b}m"
 };
 
 pub struct Dahlia {
@@ -137,48 +142,68 @@ impl Dahlia {
         } else {
             FORMAT_TEMPLATES
         };
+
+        // RGB
         if code.len() == 6 {
+            // try to avoid vectors if you can do with just arrays
+            let color =
+                [0, 2, 4].map(|i| u8::from_str_radix(&code[i..i + 2], 16).unwrap().to_string());
+
+            // Rust has array destructuring
+            let [r, g, b] = color;
+
             let template = formats.get(&24u8).unwrap();
-            let mut color = vec![];
-            for i in (0..5).step_by(2) {
-                color.push(i64::from_str_radix(&code[i..i + 2], 16).unwrap());
-            }
-            let r = color[0].to_string();
-            let g = color[1].to_string();
-            let b = color[2].to_string();
             template
-                .replacen("{}", &r, 1)
-                .replacen("{}", &g, 1)
-                .replacen("{}", &b, 1)
-        } else if FORMATTERS.contains_key(code.as_str()) {
+                // maybe more of an opinion, but this looks better
+                .replace("{r}", &r)
+                .replace("{g}", &g)
+                .replace("{b}", &b)
+        } else if let Some(value) = FORMATTERS.get(&code) {
+            // if let is great
             let template = formats.get(&3u8).unwrap();
-            let value = FORMATTERS.get(code.as_str()).unwrap();
-            template.replace("{}", &value.to_string())
+
+            template.replace("{}", value)
         } else {
             let template = formats.get(&self.depth.to_u8()).unwrap();
-            if self.depth.to_u8() == 24u8 {
-                let values = COLORS_24BIT.get(code.as_str()).unwrap();
-                let r = values[0].to_string();
-                let g = values[1].to_string();
-                let b = values[2].to_string();
+
+            // more clear - no magic numbers
+            if self.depth == Depth::High {
+                let values = COLORS_24BIT.get(&code).unwrap();
+                let [r, g, b] = values;
+
                 template
-                    .replacen("{}", &r, 1)
-                    .replacen("{}", &g, 1)
-                    .replacen("{}", &b, 1)
+                    .replace("{r}", r)
+                    .replace("{g}", g)
+                    .replace("{b}", b)
             } else {
                 let color_map = match self.depth {
                     Depth::Low => COLORS_3BIT,
                     Depth::Medium => COLORS_8BIT,
-                    _ => phf_map! {},
+                    _ => unreachable!(), // this shouldn't ever happen
                 };
-                let value = if self.depth.to_u8() == 3 {
-                    *color_map.get(&code).unwrap()
-                } else {
-                    color_map.get(&code).unwrap() + 10 * (bg as u8)
+
+                // simpler way to express the intention
+                let mut value = color_map.get(&code).unwrap().to_string();
+
+                if self.depth == Depth::Medium && bg {
+                    // only downside to storing codes as strings
+                    value = (value.parse::<u8>().unwrap() + 10).to_string()
                 };
-                template.replace("{}", &value.to_string())
+
+                template.replace("{}", &value)
             }
         }
+    }
+
+    /// Return string with all the possible formatting
+    pub fn test(&self) -> String {
+        self.convert(
+            "0123456789abcdefg"
+                .chars()
+                .map(|ch| format!("&{ch}{ch}"))
+                .collect::<String>()
+                + "&r&ll&r&mm&r&nn&r&oo",
+        )
     }
 }
 
@@ -228,4 +253,41 @@ pub fn clean_ansi(mut string: String) -> String {
     }
 
     string
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_clean() {
+        assert_eq!(clean("hmm &3&oyes&r.".into()), "hmm yes.")
+    }
+
+    #[test]
+    fn test_clean_anscii() {
+        assert_eq!(
+            clean_ansi("hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m".into()),
+            "hmm yes."
+        )
+    }
+
+    #[test]
+    fn test_convert() {
+        let dahlia = Dahlia::new(Depth::High, false);
+
+        assert_eq!(
+            dahlia.convert("hmm &3&oyes&r.".into()),
+            "hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m"
+        )
+    }
+
+    #[test]
+    fn test_test() {
+        let dahlia = Dahlia::new(Depth::High, false);
+
+        let test = dahlia.test();
+
+        assert_eq!(test, "\x1b[38;2;0;0;0m0\x1b[38;2;0;0;170m1\x1b[38;2;0;170;0m2\x1b[38;2;0;170;170m3\x1b[38;2;170;0;0m4\x1b[38;2;170;0;170m5\x1b[38;2;255;170;0m6\x1b[38;2;170;170;170m7\x1b[38;2;85;85;85m8\x1b[38;2;85;85;255m9\x1b[38;2;85;255;85ma\x1b[38;2;85;255;255mb\x1b[38;2;255;85;85mc\x1b[38;2;255;85;255md\x1b[38;2;255;255;85me\x1b[38;2;255;255;255mf\x1b[38;2;221;214;5mg\x1b[0m\x1b[1ml\x1b[0m\x1b[9mm\x1b[0m\x1b[4mn\x1b[0m\x1b[3mo\x1b[0m")
+    }
 }
