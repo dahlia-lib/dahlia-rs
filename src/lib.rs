@@ -109,15 +109,14 @@ impl Dahlia {
         Dahlia { depth, no_reset }
     }
 
-    pub fn convert(&self, string: String) -> String {
-        let mut string = string;
+    // you can use mut directly in the parameters
+    pub fn convert(&self, mut string: String) -> String {
         if !(string.ends_with("&r") || self.no_reset) {
             string += "&r";
         }
         for (code, bg, color) in find_codes(&string) {
-            string = string
-                .as_str()
-                .replace(code.as_str(), self.get_ansi(color, bg).as_str());
+            // string.as_str() == &string
+            string = string.replace(&code, &self.get_ansi(color, bg));
         }
         string
     }
