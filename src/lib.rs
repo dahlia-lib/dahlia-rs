@@ -123,10 +123,12 @@ impl Dahlia {
     }
 
     pub fn input(&self, prompt: String) -> String {
-        let mut inp = String::new();
         print!("{}", self.convert(prompt));
-        let _ = stdout().flush();
-        stdin().read_line(&mut inp).expect("");
+        // good practice to handle errors at least with except
+        stdout().flush().expect("Can't write to stdout");
+
+        let mut inp = String::new();
+        stdin().read_line(&mut inp).expect("Can't read from stdin");
         inp
     }
 
