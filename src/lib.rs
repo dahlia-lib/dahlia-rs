@@ -116,7 +116,6 @@ impl Dahlia {
             string += "&r";
         }
         for (code, bg, color) in find_codes(&string) {
-            // string.as_str() == &string
             string = string.replace(&code, &self.get_ansi(color, bg));
         }
         string
