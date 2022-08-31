@@ -240,6 +240,20 @@ pub fn clean_ansi(mut string: String) -> String {
     string
 }
 
+#[macro_export]
+macro_rules! dprint {
+    ($d:tt, $($arg:tt)*) => {
+        print!("{}", $d.convert(format!($($arg)*)));
+    };
+}
+
+#[macro_export]
+macro_rules! dprintln {
+    ($d:tt, $($arg:tt)*) => {
+        println!("{}", $d.convert(format!($($arg)*)));
+    };
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
