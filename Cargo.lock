@@ -12,8 +12,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "dahlia_rs"
-version = "0.1.0"
+name = "dahlia"
+version = "1.0.0"
 dependencies = [
  "lazy_static",
  "phf",
