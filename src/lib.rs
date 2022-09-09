@@ -263,7 +263,7 @@ mod test {
     }
 
     #[test]
-    fn test_clean_anscii() {
+    fn test_clean_ansi() {
         assert_eq!(
             clean_ansi("hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m".into()),
             "hmm yes."
