@@ -208,7 +208,6 @@ lazy_static! {
     ];
 }
 
-
 fn fill_template(template: &str, value: &str) -> String {
     template.replace("{}", value)
 }
@@ -220,16 +219,18 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
         .replace("{b}", b)
 }
 
-pub fn clean(string: String) -> String {
-    CODE_REGEXES.iter().fold(string, |string, pattern| {
+fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
+    regexes.iter().fold(string, |string, pattern| {
         pattern.replace_all(&string, "").to_string()
     })
 }
 
+pub fn clean(string: String) -> String {
+    remove_all_regexes(&*CODE_REGEXES, string)
+}
+
 pub fn clean_ansi(string: String) -> String {
-    ANSI_REGEXES.iter().fold(string, |string, pattern| {
-        pattern.replace_all(&string, "").to_string()
-    })
+    remove_all_regexes(&*ANSI_REGEXES, string)
 }
 
 #[macro_export]
