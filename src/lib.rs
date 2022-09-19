@@ -220,20 +220,16 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
         .replace("{b}", b)
 }
 
-pub fn clean(mut string: String) -> String {
-    for pattern in CODE_REGEXES.iter() {
-        string = pattern.replace_all(&string, "").to_string()
-    }
-
-    string
+pub fn clean(string: String) -> String {
+    CODE_REGEXES.iter().fold(string, |string, pattern| {
+        pattern.replace_all(&string, "").to_string()
+    })
 }
 
-pub fn clean_ansi(mut string: String) -> String {
-    for pattern in ANSI_REGEXES.iter() {
-        string = pattern.replace_all(&string, "").to_string()
-    }
-
-    string
+pub fn clean_ansi(string: String) -> String {
+    ANSI_REGEXES.iter().fold(string, |string, pattern| {
+        pattern.replace_all(&string, "").to_string()
+    })
 }
 
 #[macro_export]
