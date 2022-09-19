@@ -1,5 +1,5 @@
 use phf::{phf_map, Map};
-use regex::Regex;
+use regex::{Captures, Regex};
 use std::io::{stdin, stdout, Write};
 
 use lazy_static::lazy_static;
@@ -111,14 +111,25 @@ impl Dahlia {
         Dahlia { depth, no_reset }
     }
 
-    pub fn convert(&self, mut string: String) -> String {
-        if !(string.ends_with("&r") || self.no_reset) {
-            string += "&r";
-        }
-        for (code, bg, color) in find_codes(&string) {
-            string = string.replace(&code, &self.get_ansi(color, bg));
-        }
-        string
+    pub fn convert(&self, string: String) -> String {
+        let string = if string.ends_with("&r") || self.no_reset {
+            string
+        } else {
+            string + "&r"
+        };
+
+        let replacer = |captures: &Captures| {
+            let code = &captures[0];
+            let bg = &captures[1] == "~";
+            let color = &captures[2];
+
+            self.get_ansi(color, bg)
+                .unwrap_or_else(|| panic!("Invalid code: {code}"))
+        };
+
+        CODE_REGEXES.iter().fold(string, |string, pattern| {
+            pattern.replace_all(&string, replacer).to_string()
+        })
     }
 
     pub fn input(&self, prompt: String) -> String {
@@ -209,19 +220,6 @@ lazy_static! {
     ];
 }
 
-fn find_codes(string: &str) -> Vec<(String, bool, String)> {
-    let mut codes = vec![];
-    for pattern in CODE_REGEXES.iter() {
-        for cap in pattern.captures_iter(string) {
-            codes.push((
-                cap.get(0).map_or("", |m| m.as_str()).to_string(),
-                cap.get(1).map_or("", |m| m.as_str()) == "~",
-                cap.get(2).map_or("", |m| m.as_str()).to_string(),
-            ));
-        }
-    }
-    codes
-}
 
 pub fn clean(mut string: String) -> String {
     for pattern in CODE_REGEXES.iter() {
