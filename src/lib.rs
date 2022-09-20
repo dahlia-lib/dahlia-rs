@@ -1,5 +1,5 @@
 use phf::{phf_map, Map};
-use regex::Regex;
+use regex::{Captures, Regex};
 use std::io::{stdin, stdout, Write};
 
 use lazy_static::lazy_static;
@@ -111,14 +111,25 @@ impl Dahlia {
         Dahlia { depth, no_reset }
     }
 
-    pub fn convert(&self, mut string: String) -> String {
-        if !(string.ends_with("&r") || self.no_reset) {
-            string += "&r";
-        }
-        for (code, bg, color) in find_codes(&string) {
-            string = string.replace(&code, &self.get_ansi(color, bg));
-        }
-        string
+    pub fn convert(&self, string: String) -> String {
+        let string = if string.ends_with("&r") || self.no_reset {
+            string
+        } else {
+            string + "&r"
+        };
+
+        let replacer = |captures: &Captures| {
+            let code = &captures[0];
+            let bg = &captures[1] == "~";
+            let color = &captures[2];
+
+            self.get_ansi(color, bg)
+                .unwrap_or_else(|| panic!("Invalid code: {code}"))
+        };
+
+        CODE_REGEXES.iter().fold(string, |string, pattern| {
+            pattern.replace_all(&string, replacer).to_string()
+        })
     }
 
     pub fn input(&self, prompt: String) -> String {
@@ -130,7 +141,7 @@ impl Dahlia {
         inp
     }
 
-    fn get_ansi(&self, code: String, bg: bool) -> String {
+    fn get_ansi(&self, code: &str, bg: bool) -> Option<String> {
         let formats = if bg {
             BG_FORMAT_TEMPLATES
         } else {
@@ -138,46 +149,34 @@ impl Dahlia {
         };
 
         if code.len() == 6 {
-            let color =
+            let [r, g, b] =
                 [0, 2, 4].map(|i| u8::from_str_radix(&code[i..i + 2], 16).unwrap().to_string());
 
-            let [r, g, b] = color;
-
-            let template = formats.get(&24u8).unwrap();
-            template
-                .replace("{r}", &r)
-                .replace("{g}", &g)
-                .replace("{b}", &b)
-        } else if let Some(value) = FORMATTERS.get(&code) {
-            let template = formats.get(&3u8).unwrap();
-
-            template.replace("{}", value)
+            Some(fill_rgb_template(formats[&24u8], &r, &g, &b))
+        } else if let Some(value) = FORMATTERS.get(code) {
+            Some(fill_template(formats[&3u8], value))
         } else {
-            let template = formats.get(&self.depth.to_u8()).unwrap();
+            let template = formats[&self.depth.to_u8()];
 
             if self.depth == Depth::High {
-                let values = COLORS_24BIT.get(&code).unwrap();
-                let [r, g, b] = values;
+                let [r, g, b] = COLORS_24BIT.get(code)?;
 
-                template
-                    .replace("{r}", r)
-                    .replace("{g}", g)
-                    .replace("{b}", b)
-            } else {
-                let color_map = match self.depth {
-                    Depth::Low => COLORS_3BIT,
-                    Depth::Medium => COLORS_8BIT,
-                    _ => unreachable!(),
-                };
-
-                let mut value = color_map.get(&code).unwrap().to_string();
-
-                if self.depth == Depth::Medium && bg {
-                    value = (value.parse::<u8>().unwrap() + 10).to_string()
-                };
-
-                template.replace("{}", &value)
+                return Some(fill_rgb_template(template, r, g, b));
             }
+
+            let color_map = match self.depth {
+                Depth::Low => COLORS_3BIT,
+                Depth::Medium => COLORS_8BIT,
+                _ => unreachable!(),
+            };
+
+            let mut value = color_map.get(code)?.to_string();
+
+            if self.depth == Depth::Medium && bg {
+                value = (value.parse::<u8>().ok()? + 10).to_string()
+            };
+
+            Some(fill_template(template, &value))
         }
     }
 
@@ -209,34 +208,29 @@ lazy_static! {
     ];
 }
 
-fn find_codes(string: &str) -> Vec<(String, bool, String)> {
-    let mut codes = vec![];
-    for pattern in CODE_REGEXES.iter() {
-        for cap in pattern.captures_iter(string) {
-            codes.push((
-                cap.get(0).map_or("", |m| m.as_str()).to_string(),
-                cap.get(1).map_or("", |m| m.as_str()) == "~",
-                cap.get(2).map_or("", |m| m.as_str()).to_string(),
-            ));
-        }
-    }
-    codes
+fn fill_template(template: &str, value: &str) -> String {
+    template.replace("{}", value)
 }
 
-pub fn clean(mut string: String) -> String {
-    for pattern in CODE_REGEXES.iter() {
-        string = pattern.replace_all(&string, "").to_string()
-    }
-
-    string
+fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
+    template
+        .replace("{r}", r)
+        .replace("{g}", g)
+        .replace("{b}", b)
 }
 
-pub fn clean_ansi(mut string: String) -> String {
-    for pattern in ANSI_REGEXES.iter() {
-        string = pattern.replace_all(&string, "").to_string()
-    }
+fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
+    regexes.iter().fold(string, |string, pattern| {
+        pattern.replace_all(&string, "").to_string()
+    })
+}
 
-    string
+pub fn clean(string: String) -> String {
+    remove_all_regexes(&*CODE_REGEXES, string)
+}
+
+pub fn clean_ansi(string: String) -> String {
+    remove_all_regexes(&*ANSI_REGEXES, string)
 }
 
 #[macro_export]
