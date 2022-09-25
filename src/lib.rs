@@ -132,6 +132,27 @@ impl Dahlia {
         }
     }
 
+    /// Formats a string using the format codes.
+    ///
+    /// ### Example
+    /// ```rs
+    /// let dahlia = Dahlia::new(Depth::High, true);
+    /// let text = dahlia.convert("&aHello\n&cWorld");
+    /// println!("{}", text);
+    /// ```
+    ///
+    /// <style>
+    /// .a {
+    ///     color: #55ff55;
+    /// }
+    /// .c {
+    ///     color: #ff5555;
+    /// }
+    /// </style>
+    /// <pre>
+    /// <span class="a">Hello</span>
+    /// <span class="c">World</span>
+    /// </pre>
     pub fn convert(&self, string: String) -> String {
         if self.no_color {
             return clean(string);
