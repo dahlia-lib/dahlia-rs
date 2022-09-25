@@ -4,10 +4,14 @@ use std::io::{stdin, stdout, Write};
 
 use lazy_static::lazy_static;
 
+/// Specifies usable color depth levels
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Depth {
+    /// 3-bit color
     Low,
+    /// 8-bit color
     Medium,
+    /// 24-bit color (true color)
     High,
 }
 
