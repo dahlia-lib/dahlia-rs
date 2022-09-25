@@ -1,5 +1,6 @@
 use phf::{phf_map, Map};
 use regex::Regex;
+use std::env;
 use std::io::{stdin, stdout, Write};
 
 use lazy_static::lazy_static;
@@ -106,8 +107,11 @@ const BG_FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
 };
 
 pub struct Dahlia {
+    // Specifies what ANSI color set to use (in bits)
     depth: Depth,
+    // When true, doesn't add an "&r" at the end when converting strings.
     no_reset: bool,
+    // When true, `Dahlia.convert` is equivalent to `clean`
     no_color: bool,
 }
 
