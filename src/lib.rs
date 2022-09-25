@@ -108,11 +108,20 @@ const BG_FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
 pub struct Dahlia {
     depth: Depth,
     no_reset: bool,
+    no_color: bool,
 }
 
 impl Dahlia {
     pub fn new(depth: Depth, no_reset: bool) -> Self {
-        Dahlia { depth, no_reset }
+        let no_color = {
+            let var = env::var("NO_COLOR");
+            if let Ok(value) = var {
+                value.to_lowercase() == "true" || value == "1"
+            } else {
+                false
+            }
+        };
+        Dahlia { depth, no_reset, no_color }
     }
 
     /// Formats a string using the format codes.
@@ -137,6 +146,9 @@ impl Dahlia {
     /// <span class="c">World</span>
     /// </pre>
     pub fn convert(&self, mut string: String) -> String {
+        if self.no_color {
+            return clean(string);
+        }
         if !(string.ends_with("&r") || self.no_reset) {
             string += "&r";
         }
