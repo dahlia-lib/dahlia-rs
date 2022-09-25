@@ -185,7 +185,12 @@ impl Dahlia {
         }
     }
 
-    /// Return string with all the possible formatting options
+    /// Resets all modifiers.
+    pub fn reset(&self) {
+        print!("{}", self.convert("&r".into()));
+    }
+
+    /// Returns a string with all the possible formatting options.
     pub fn test(&self) -> String {
         self.convert(
             "0123456789abcdefg"
