@@ -227,6 +227,13 @@ fn find_codes(string: &str) -> Vec<(String, bool, String)> {
     codes
 }
 
+/// Removes all Dahlia format codes from a string.
+///
+/// ### Example
+/// ```rs
+/// let green_text = "&2>be me";
+/// assert_eq!(clean(green_text), ">be me");
+/// ```
 pub fn clean(mut string: String) -> String {
     for pattern in CODE_REGEXES.iter() {
         string = pattern.replace_all(&string, "").to_string()
