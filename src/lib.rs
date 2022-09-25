@@ -235,6 +235,14 @@ pub fn clean(mut string: String) -> String {
     string
 }
 
+/// Removes all ANSI codes from a string.
+///
+/// ### Example
+/// ```rs
+/// let dahlia = Dahlia::new(Depth::High, false);
+/// let green_text = dahlia.convert("&2>be me");
+/// assert_eq!(clean_ansi(green_text), ">be me");
+/// ```
 pub fn clean_ansi(mut string: String) -> String {
     for pattern in ANSI_REGEXES.iter() {
         string = pattern.replace_all(&string, "").to_string()
