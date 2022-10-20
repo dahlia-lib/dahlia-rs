@@ -178,6 +178,8 @@ impl Dahlia {
         })
     }
 
+    /// Writes the prompt to stdout, then reads a line from input,
+    /// and returns it (excluding the trailing newline).
     pub fn input(&self, prompt: String) -> String {
         print!("{}", self.convert(prompt));
         stdout().flush().expect("Can't write to stdout");
