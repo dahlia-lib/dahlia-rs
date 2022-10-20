@@ -186,7 +186,7 @@ impl Dahlia {
 
         let mut inp = String::new();
         stdin().read_line(&mut inp).expect("Can't read from stdin");
-        inp
+        inp[..inp.len() - 1].into()
     }
 
     fn get_ansi(&self, code: &str, bg: bool) -> Option<String> {
