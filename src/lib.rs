@@ -306,6 +306,17 @@ macro_rules! dprint {
     };
 }
 
+/// Wrapper over `println!`, takes a Dahlia instance as the first argument
+/// and uses its convert method for coloring strings.
+/// 
+/// ### Example
+/// ```rs
+/// let d = Dahlia::new(Depth::Low, false);
+/// let name = "Bob";
+/// // The following two are equivalent
+/// println!("{}", d.convert(format!("Hi &3{}&r!", name));
+/// dprintln!(d, "Hi &3{}&r!", name)
+/// ```
 #[macro_export]
 macro_rules! dprintln {
     ($d:tt, $($arg:tt)*) => {
