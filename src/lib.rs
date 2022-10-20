@@ -299,6 +299,17 @@ pub fn clean_ansi(string: String) -> String {
     remove_all_regexes(&*ANSI_REGEXES, string)
 }
 
+/// Wrapper over `print!`, takes a Dahlia instance as the first argument
+/// and uses its convert method for coloring strings.
+/// 
+/// ### Example
+/// ```rs
+/// let d = Dahlia::new(Depth::Low, false);
+/// let name = "Bob";
+/// // The following two are equivalent
+/// print!("{}", d.convert(format!("Hi &3{}&r!", name));
+/// dprint!(d, "Hi &3{}&r!", name)
+/// ```
 #[macro_export]
 macro_rules! dprint {
     ($d:tt, $($arg:tt)*) => {
