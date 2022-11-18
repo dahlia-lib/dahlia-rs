@@ -289,8 +289,8 @@ impl Dahlia {
             "0123456789abcdefg"
                 .chars()
                 .map(|ch| format!("&{ch}{ch}"))
-                .collect::<String>()
-                + "&r&ll&r&mm&r&nn&r&oo",
+                .chain("lmno".chars().map(|ch| format!("&r&{ch}{ch}")))
+                .collect::<String>(),
         )
     }
 }
