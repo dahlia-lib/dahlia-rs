@@ -1,13 +1,13 @@
 //! A simple text formatting package, inspired by the game Minecraft.
-//! 
+//!
 //! Text is formatted in a similar way to in the game. With Dahlia,
 //! it is formatted by typing a special character `&` followed by a
 //! format code and finally the text to be formatted.
-//! 
+//!
 //! ## Color Format Codes
-//! 
+//!
 //! Each digit/letter corresponds to a hex value (dependent on the color depth). The coloring can be applied to the background if a `~` is inserted between `&` and the code.
-//! 
+//!
 //! Color | 3-bit | 8-bit | 24-bit
 //! --- | --- | --- | ---
 //! `0` | `#000000` | `#000000` | `#000000`
@@ -27,9 +27,9 @@
 //! `e` | `#808000` | `#ffff5f` | `#ffff55`
 //! `f` | `#c0c0c0` | `#ffffff` | `#ffffff`
 //! `g` | `#808000` | `#d7d700` | `#ddd605`
-//! 
+//!
 //! ## Formatting Codes
-//! 
+//!
 //! Code | Result
 //! --- | ---
 //! `l` | Bold
@@ -37,16 +37,15 @@
 //! `n` | Underline
 //! `o` | Italic
 //! `r` | Reset formatting
-//! 
+//!
 //! ## Custom Colors
-//! 
+//!
 //! For colors by hex code, use square brackets containing the hex code inside of it.
-//! 
+//!
 //! - Foreground: `&[#xxxxxx]`
 //! - Background: `&~[#xxxxxx]`
-//! 
+//!
 //! `xxxxxx` represents the hex value of the color.
-
 
 use phf::{phf_map, Map};
 use regex::{Captures, Regex};
@@ -163,10 +162,14 @@ pub struct Dahlia {
     no_reset: bool,
     // When true, `Dahlia.convert` is equivalent to `clean`
     no_color: bool,
+    // Regex patterns used by the Dahlia instance
+    patterns: Vec<Regex>,
+    // Marker used for formatting
+    marker: char,
 }
 
 impl Dahlia {
-    pub fn new(depth: Depth, no_reset: bool) -> Self {
+    pub fn new(depth: Depth, no_reset: bool, marker: char) -> Self {
         let no_color = {
             let var = env::var("NO_COLOR");
             if let Ok(value) = var {
@@ -175,10 +178,13 @@ impl Dahlia {
                 false
             }
         };
+        let patterns = create_patterns(marker);
         Dahlia {
             depth,
             no_reset,
             no_color,
+            patterns,
+            marker,
         }
     }
 
@@ -205,13 +211,15 @@ impl Dahlia {
     /// </pre>
     pub fn convert(&self, string: String) -> String {
         if self.no_color {
-            return clean(string);
+            return clean(string, self.marker);
         }
 
-        let string = if string.ends_with("&r") || self.no_reset {
+        let reset = format!("{}r", self.marker);
+
+        let string = if string.ends_with(reset.as_str()) || self.no_reset {
             string
         } else {
-            string + "&r"
+            string + reset.as_str()
         };
 
         let replacer = |captures: &Captures| {
@@ -223,7 +231,7 @@ impl Dahlia {
                 .unwrap_or_else(|| panic!("Invalid code: {code}"))
         };
 
-        CODE_REGEXES.iter().fold(string, |string, pattern| {
+        self.patterns.iter().fold(string, |string, pattern| {
             pattern.replace_all(&string, replacer).to_string()
         })
     }
@@ -280,7 +288,7 @@ impl Dahlia {
 
     /// Resets all modifiers.
     pub fn reset(&self) {
-        print!("{}", self.convert("&r".into()));
+        print!("{}", self.convert(format!("{}r", self.marker)));
     }
 
     /// Returns a string with all the possible formatting options.
@@ -288,27 +296,33 @@ impl Dahlia {
         self.convert(
             "0123456789abcdefg"
                 .chars()
-                .map(|ch| format!("&{ch}{ch}"))
-                .chain("lmno".chars().map(|ch| format!("&r&{ch}{ch}")))
+                .map(|ch| format!("{}{ch}{ch}", self.marker))
+                .chain("lmno".chars().map(|ch| format!("{m}r{m}{ch}{ch}", m = self.marker)))
                 .collect::<String>(),
         )
     }
 }
 
-fn re(string: &str) -> Regex {
-    Regex::new(string).unwrap()
+fn re(string: String) -> Regex {
+    Regex::new(string.as_str()).unwrap()
 }
 
 lazy_static! {
-    static ref CODE_REGEXES: [Regex; 2] = [
-        re(r"&(~?)([0-9a-gl-or])"),
-        re(r"&(~?)\[#([0-9a-fA-F]{6})\]"),
+    static ref ANSI_REGEXES: Vec<Regex> = vec![
+        re(r"\x1b\[(\d+)m".to_string()),
+        re(r"\x1b\[(?:3|4)8;5;(\d+)m".to_string()),
+        re(r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m".to_string()),
     ];
-    static ref ANSI_REGEXES: [Regex; 3] = [
-        re(r"\x1b\[(\d+)m"),
-        re(r"\x1b\[(?:3|4)8;5;(\d+)m"),
-        re(r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m"),
-    ];
+    static ref CODE_REGEXES: Vec<&'static str> =
+        vec![r"(~?)([0-9a-gl-or])", r"(~?)\[#([0-9a-fA-F]{6})\]",];
+}
+
+fn create_patterns(marker: char) -> Vec<Regex> {
+    CODE_REGEXES
+        .iter()
+        .map(|x| format!("{}{}", marker, x))
+        .map(re)
+        .collect()
 }
 
 fn fill_template(template: &str, value: &str) -> String {
@@ -322,7 +336,7 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
         .replace("{b}", b)
 }
 
-fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
+fn remove_all_regexes(regexes: Vec<Regex>, string: String) -> String {
     regexes.iter().fold(string, |string, pattern| {
         pattern.replace_all(&string, "").to_string()
     })
@@ -335,8 +349,8 @@ fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
 /// let green_text = "&2>be me";
 /// assert_eq!(clean(green_text), ">be me");
 /// ```
-pub fn clean(string: String) -> String {
-    remove_all_regexes(&*CODE_REGEXES, string)
+pub fn clean(string: String, marker: char) -> String {
+    remove_all_regexes(create_patterns(marker), string)
 }
 
 /// Removes all ANSI codes from a string.
@@ -348,12 +362,12 @@ pub fn clean(string: String) -> String {
 /// assert_eq!(clean_ansi(green_text), ">be me");
 /// ```
 pub fn clean_ansi(string: String) -> String {
-    remove_all_regexes(&*ANSI_REGEXES, string)
+    remove_all_regexes(ANSI_REGEXES.clone(), string)
 }
 
 /// Wrapper over `print!`, takes a Dahlia instance as the first argument
 /// and uses its convert method for coloring strings.
-/// 
+///
 /// ### Example
 /// ```rs
 /// let d = Dahlia::new(Depth::Low, false);
@@ -371,7 +385,7 @@ macro_rules! dprint {
 
 /// Wrapper over `println!`, takes a Dahlia instance as the first argument
 /// and uses its convert method for coloring strings.
-/// 
+///
 /// ### Example
 /// ```rs
 /// let d = Dahlia::new(Depth::Low, false);
@@ -393,7 +407,12 @@ mod test {
 
     #[test]
     fn test_clean() {
-        assert_eq!(clean("hmm &3&oyes&r.".into()), "hmm yes.")
+        assert_eq!(clean("hmm &3&oyes&r.".into(), '&'), "hmm yes.")
+    }
+
+    #[test]
+    fn test_clean_custom_marker() {
+        assert_eq!(clean("i'm !4!lballing!r!".into(), '!'), "i'm balling!")
     }
 
     #[test]
@@ -406,7 +425,7 @@ mod test {
 
     #[test]
     fn test_convert() {
-        let dahlia = Dahlia::new(Depth::High, false);
+        let dahlia = Dahlia::new(Depth::High, false, '&');
 
         assert_eq!(
             dahlia.convert("hmm &3&oyes&r.".into()),
@@ -415,8 +434,18 @@ mod test {
     }
 
     #[test]
+    fn test_convert_custom_marker() {
+        let dahlia = Dahlia::new(Depth::High, false, '@');
+
+        assert_eq!(
+            dahlia.convert("hmm @3@oyes@r.".into()),
+            "hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m"
+        )
+    }
+
+    #[test]
     fn test_test() {
-        let dahlia = Dahlia::new(Depth::High, false);
+        let dahlia = Dahlia::new(Depth::High, false, '&');
 
         let test = dahlia.test();
 
