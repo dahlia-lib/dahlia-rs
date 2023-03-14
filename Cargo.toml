@@ -4,7 +4,7 @@ version = "1.1.0"
 edition = "2021"
 license = "MIT"
 description = "A library allowing you to use Minecraft format codes in strings."
-repository = "https://github.com/trag1c/Dahlia.rs"
+repository = "https://github.com/dahlia-lib/dahlia-rs"
 authors = ["trag1c <trag1cdev@yahoo.com>"]
 readme = "README.md"
 
