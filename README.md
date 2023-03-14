@@ -1,4 +1,4 @@
-# Dahlia-rs
+# Dahlia.rs
 
 A Rust port of [Dahlia](https://github.com/dahlia-lib/dahlia) — a simple text formatting package, inspired by the game Minecraft.
 
