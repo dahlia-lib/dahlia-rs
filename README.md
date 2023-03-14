@@ -1,6 +1,6 @@
 # Dahlia-rs
 
-A Rust port of [dahlia](https://github.com/dahlia-lib/dahlia) — a simple text formatting package, inspired by the game Minecraft.
+A Rust port of [Dahlia](https://github.com/dahlia-lib/dahlia) — a simple text formatting package, inspired by the game Minecraft.
 
 Text is formatted in a similar way to in the game. With Dahlia, it is formatted
 by typing a marker (`&` by default in the original implementation) followed by a
