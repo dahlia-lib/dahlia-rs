@@ -436,6 +436,16 @@ mod test {
     }
 
     #[test]
+    fn test_convert_with_background() {
+        let dahlia = Dahlia::new(Depth::High, false, '&');
+
+        assert_eq!(
+            dahlia.convert("hmm &~3yes&r.".into()),
+            "hmm \x1b[48;2;0;170;170myes\x1b[0m.\x1b[0m"
+        )
+    }
+
+    #[test]
     fn test_convert_custom_marker() {
         let dahlia = Dahlia::new(Depth::High, false, '@');
 
