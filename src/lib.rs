@@ -47,12 +47,15 @@
 //!
 //! `xxxxxx` represents the hex value of the color.
 
-use phf::{phf_map, Map};
-use regex::{Captures, Regex};
-use std::env;
-use std::io::{stdin, stdout, Write};
+use std::{
+    borrow::Cow,
+    env,
+    io::{stdin, stdout, Write},
+};
 
 use lazy_static::lazy_static;
+use phf::{phf_map, Map};
+use regex::{Captures, Regex};
 
 /// Specifies usable color depth levels
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
