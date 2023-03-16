@@ -308,13 +308,15 @@ fn re(string: String) -> Regex {
 }
 
 lazy_static! {
-    static ref ANSI_REGEXES: Vec<Regex> = vec![
-        re(r"\x1b\[(\d+)m".to_string()),
-        re(r"\x1b\[(?:3|4)8;5;(\d+)m".to_string()),
-        re(r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m".to_string()),
-    ];
-    static ref CODE_REGEXES: Vec<&'static str> =
-        vec![r"(~?)([0-9a-gl-or])", r"(~?)\[#([0-9a-fA-F]{6})\]",];
+    static ref ANSI_REGEXES: [Regex; 3] = [
+        r"\x1b\[(\d+)m",
+        r"\x1b\[(?:3|4)8;5;(\d+)m",
+        r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m",
+    ]
+    .map(ToString::to_string)
+    .map(re);
+    static ref CODE_REGEXES: [&'static str; 2] =
+        [r"(~?)([0-9a-gl-or])", r"(~?)\[#([0-9a-fA-F]{6})\]"];
 }
 
 fn create_patterns(marker: char) -> Vec<Regex> {
@@ -336,7 +338,7 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
         .replace("{b}", b)
 }
 
-fn remove_all_regexes(regexes: Vec<Regex>, string: String) -> String {
+fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
     regexes.iter().fold(string, |string, pattern| {
         pattern.replace_all(&string, "").to_string()
     })
@@ -350,7 +352,7 @@ fn remove_all_regexes(regexes: Vec<Regex>, string: String) -> String {
 /// assert_eq!(clean(green_text), ">be me");
 /// ```
 pub fn clean(string: String, marker: char) -> String {
-    remove_all_regexes(create_patterns(marker), string)
+    remove_all_regexes(&create_patterns(marker), string)
 }
 
 /// Removes all ANSI codes from a string.
@@ -362,7 +364,7 @@ pub fn clean(string: String, marker: char) -> String {
 /// assert_eq!(clean_ansi(green_text), ">be me");
 /// ```
 pub fn clean_ansi(string: String) -> String {
-    remove_all_regexes(ANSI_REGEXES.clone(), string)
+    remove_all_regexes(&*ANSI_REGEXES, string)
 }
 
 /// Wrapper over `print!`, takes a Dahlia instance as the first argument
