@@ -61,7 +61,9 @@ use regex::{Captures, Regex};
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Depth {
     /// 3-bit color
-    Low = 3,
+    TTY = 3,
+    /// 4-bit color
+    Low = 4,
     /// 8-bit color
     Medium = 8,
     /// 24-bit color (true color)
@@ -77,6 +79,26 @@ const FORMATTERS: Map<&str, &str> = phf_map! {
 };
 
 const COLORS_3BIT: Map<&str, &str> = phf_map! {
+    "0" => "30",
+    "1" => "34",
+    "2" => "32",
+    "3" => "36",
+    "4" => "31",
+    "5" => "35",
+    "6" => "33",
+    "7" => "37",
+    "8" => "30",
+    "9" => "34",
+    "a" => "32",
+    "b" => "34",
+    "c" => "31",
+    "d" => "35",
+    "e" => "33",
+    "f" => "37",
+    "g" => "33"
+};
+
+const COLORS_4BIT: Map<&str, &str> = phf_map! {
     "0" => "30",
     "1" => "34",
     "2" => "32",
@@ -138,14 +160,22 @@ const COLORS_24BIT: Map<&str, [&str; 3]> = phf_map! {
 
 const FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
     3u8 => "\x1b[{}m",
+    4u8 => "\x1b[{}m",
     8u8 => "\x1b[38;5;{}m",
     24u8 => "\x1b[38;2;{r};{g};{b}m"
 };
 
 const BG_FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
     3u8 => "\x1b[{}m",
+    4u8 => "\x1b[{}m",
     8u8 => "\x1b[48;5;{}m",
     24u8 => "\x1b[48;2;{r};{g};{b}m"
+};
+
+const COLORS: Map<u8, &Map<&str, &str>> = phf_map! {
+    3u8 => &COLORS_3BIT,
+    4u8 => &COLORS_4BIT,
+    8u8 => &COLORS_8BIT,
 };
 
 pub struct Dahlia {
@@ -266,12 +296,7 @@ impl Dahlia {
                 return Some(fill_rgb_template(template, r, g, b));
             }
 
-            let color_map = match self.depth {
-                Depth::Low => COLORS_3BIT,
-                Depth::Medium => COLORS_8BIT,
-                _ => unreachable!(),
-            };
-
+            let color_map = COLORS[&(self.depth as u8)];
             let mut value = color_map.get(code)?.to_string();
 
             if bg && self.depth <= Depth::Low {
