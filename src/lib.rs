@@ -268,7 +268,7 @@ impl Dahlia {
 
             let mut value = color_map.get(code)?.to_string();
 
-            if self.depth == Depth::Medium && bg {
+            if bg && self.depth <= Depth::Low {
                 value = (value.parse::<u8>().ok()? + 10).to_string()
             };
 
