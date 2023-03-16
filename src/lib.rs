@@ -296,8 +296,12 @@ impl Dahlia {
         self.convert(
             "0123456789abcdefg"
                 .chars()
-                .map(|ch| format!("{}{ch}{ch}", self.marker))
-                .chain("lmno".chars().map(|ch| format!("{m}r{m}{ch}{ch}", m = self.marker)))
+                .map(|ch| format!("{m}{ch}{ch}", m = self.marker))
+                .chain(
+                    "lmno"
+                        .chars()
+                        .map(|ch| format!("{m}r{m}{ch}{ch}", m = self.marker)),
+                )
                 .collect::<String>(),
         )
     }
@@ -322,7 +326,7 @@ lazy_static! {
 fn create_patterns(marker: char) -> Vec<Regex> {
     CODE_REGEXES
         .iter()
-        .map(|x| format!("{}{}", marker, x))
+        .map(|x| format!("{marker}{x}"))
         .map(re)
         .collect()
 }
