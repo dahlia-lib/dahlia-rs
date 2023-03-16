@@ -58,21 +58,11 @@ use lazy_static::lazy_static;
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Depth {
     /// 3-bit color
-    Low,
+    Low = 3,
     /// 8-bit color
-    Medium,
+    Medium = 8,
     /// 24-bit color (true color)
-    High,
-}
-
-impl Depth {
-    fn to_u8(self) -> u8 {
-        match self {
-            Depth::Low => 3u8,
-            Depth::Medium => 8u8,
-            Depth::High => 24u8,
-        }
-    }
+    High = 24,
 }
 
 const FORMATTERS: Map<&str, &str> = phf_map! {
@@ -262,7 +252,7 @@ impl Dahlia {
         } else if let Some(value) = FORMATTERS.get(code) {
             Some(fill_template(formats[&3u8], value))
         } else {
-            let template = formats[&self.depth.to_u8()];
+            let template = formats[&(self.depth as u8)];
 
             if self.depth == Depth::High {
                 let [r, g, b] = COLORS_24BIT.get(code)?;
