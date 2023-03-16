@@ -221,9 +221,12 @@ impl Dahlia {
                 .unwrap_or_else(|| panic!("Invalid code: {code}"))
         };
 
-        self.patterns.iter().fold(string, |string, pattern| {
-            pattern.replace_all(&string, replacer).to_string()
-        })
+        self.patterns
+            .iter()
+            .fold(Cow::Owned(string), |string, pattern| {
+                pattern.replace_all(&string, replacer)
+            })
+            .to_string()
     }
 
     /// Writes the prompt to stdout, then reads a line from input,
@@ -294,6 +297,7 @@ impl Dahlia {
                 )
                 .collect::<String>(),
         )
+        .to_string()
     }
 }
 
@@ -332,9 +336,9 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
         .replace("{b}", b)
 }
 
-fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
-    regexes.iter().fold(string, |string, pattern| {
-        pattern.replace_all(&string, "").to_string()
+fn remove_all_regexes<'a>(regexes: &'a [Regex], string: Cow<'a, str>) -> Cow<'a, str> {
+    regexes.iter().fold(Cow::Owned(string), |string, pattern| {
+        pattern.replace_all(&string, "")
     })
 }
 
@@ -346,7 +350,7 @@ fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
 /// assert_eq!(clean(green_text), ">be me");
 /// ```
 pub fn clean(string: String, marker: char) -> String {
-    remove_all_regexes(&create_patterns(marker), string)
+    remove_all_regexes(&create_patterns(marker), Cow::Owned(string)).to_string()
 }
 
 /// Removes all ANSI codes from a string.
@@ -358,7 +362,7 @@ pub fn clean(string: String, marker: char) -> String {
 /// assert_eq!(clean_ansi(green_text), ">be me");
 /// ```
 pub fn clean_ansi(string: String) -> String {
-    remove_all_regexes(&*ANSI_REGEXES, string)
+    remove_all_regexes(&*ANSI_REGEXES, Cow::Owned(string)).to_string()
 }
 
 /// Wrapper over `print!`, takes a Dahlia instance as the first argument
