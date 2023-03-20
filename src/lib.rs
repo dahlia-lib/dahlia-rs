@@ -58,7 +58,7 @@ use phf::{phf_map, Map};
 use regex::{Captures, Regex};
 
 /// Specifies usable color depth levels
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub enum Depth {
     /// 3-bit color
     TTY = 3,
