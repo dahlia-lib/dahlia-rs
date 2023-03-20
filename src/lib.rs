@@ -231,17 +231,17 @@ impl Dahlia {
     /// <span class="a">Hello</span>
     /// <span class="c">World</span>
     /// </pre>
-    pub fn convert(&self, string: String) -> String {
+    pub fn convert(&self, string: &str) -> String {
         if self.no_color {
             return clean(string, self.marker);
         }
 
         let reset = format!("{}r", self.marker);
 
-        let string = if string.ends_with(reset.as_str()) || self.no_reset {
-            string
+        let string = if string.ends_with(&reset) || self.no_reset {
+            string.to_string()
         } else {
-            string + reset.as_str()
+            format!("{string}{reset}")
         };
 
         let replacer = |captures: &Captures| {
@@ -260,7 +260,7 @@ impl Dahlia {
 
     /// Writes the prompt to stdout, then reads a line from input,
     /// and returns it (excluding the trailing newline).
-    pub fn input(&self, prompt: String) -> String {
+    pub fn input(&self, prompt: &str) -> String {
         print!("{}", self.convert(prompt));
         stdout().flush().expect("Can't write to stdout");
 
@@ -305,13 +305,13 @@ impl Dahlia {
 
     /// Resets all modifiers.
     pub fn reset(&self) {
-        print!("{}", self.convert(format!("{}r", self.marker)));
+        print!("{}", self.convert(&format!("{}r", self.marker)));
     }
 
     /// Returns a string with all the possible formatting options.
     pub fn test(&self) -> String {
         self.convert(
-            "0123456789abcdefg"
+            &"0123456789abcdefg"
                 .chars()
                 .map(|ch| format!("{m}{ch}{ch}", m = self.marker))
                 .chain(
@@ -325,8 +325,8 @@ impl Dahlia {
     }
 }
 
-fn re(string: String) -> Regex {
-    Regex::new(string.as_str()).unwrap()
+fn re(string: &str) -> Regex {
+    Regex::new(string).unwrap()
 }
 
 lazy_static! {
@@ -335,7 +335,6 @@ lazy_static! {
         r"\x1b\[(?:3|4)8;5;(\d+)m",
         r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m",
     ]
-    .map(ToString::to_string)
     .map(re);
     static ref CODE_REGEXES: [&'static str; 2] =
         [r"(~?)([0-9a-gl-or])", r"(~?)\[#([0-9a-fA-F]{6})\]"];
@@ -344,8 +343,7 @@ lazy_static! {
 fn create_patterns(marker: char) -> Vec<Regex> {
     CODE_REGEXES
         .iter()
-        .map(|x| format!("{marker}{x}"))
-        .map(re)
+        .map(|x| re(&format!("{marker}{x}")))
         .collect()
 }
 
@@ -360,8 +358,8 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
         .replace("{b}", b)
 }
 
-fn remove_all_regexes<'a>(regexes: &'a [Regex], string: String) -> String {
-    regexes.iter().fold(string, |string, pattern| {
+fn remove_all_regexes<'a>(regexes: &'a [Regex], string: &str) -> String {
+    regexes.iter().fold(string.to_owned(), |string, pattern| {
         pattern.replace_all(&string, "").into_owned()
     })
 }
@@ -373,7 +371,7 @@ fn remove_all_regexes<'a>(regexes: &'a [Regex], string: String) -> String {
 /// let green_text = "&2>be me";
 /// assert_eq!(clean(green_text), ">be me");
 /// ```
-pub fn clean(string: String, marker: char) -> String {
+pub fn clean(string: &str, marker: char) -> String {
     remove_all_regexes(&create_patterns(marker), string)
 }
 
@@ -385,7 +383,7 @@ pub fn clean(string: String, marker: char) -> String {
 /// let green_text = dahlia.convert("&2>be me");
 /// assert_eq!(clean_ansi(green_text), ">be me");
 /// ```
-pub fn clean_ansi(string: String) -> String {
+pub fn clean_ansi(string: &str) -> String {
     remove_all_regexes(&*ANSI_REGEXES, string)
 }
 
