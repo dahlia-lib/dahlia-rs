@@ -303,7 +303,7 @@ impl Dahlia {
         }
     }
 
-    /// Resets all modifiers.
+    /// Resets the formatting back to the default.
     pub fn reset(&self) {
         print!("{}", self.convert(&format!("{}r", self.marker)));
     }
