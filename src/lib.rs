@@ -231,7 +231,7 @@ impl Dahlia {
     /// <span class="a">Hello</span>
     /// <span class="c">World</span>
     /// </pre>
-    pub fn convert(&self, string: &str) -> String {
+    pub fn convert(&self, string: String) -> String {
         if self.no_color {
             return clean(string, self.marker);
         }
@@ -239,7 +239,7 @@ impl Dahlia {
         let reset = format!("{}r", self.marker);
 
         let string = if string.ends_with(&reset) || self.no_reset {
-            string.to_string()
+            string
         } else {
             format!("{string}{reset}")
         };
@@ -260,7 +260,7 @@ impl Dahlia {
 
     /// Writes the prompt to stdout, then reads a line from input,
     /// and returns it (excluding the trailing newline).
-    pub fn input(&self, prompt: &str) -> String {
+    pub fn input(&self, prompt: String) -> String {
         print!("{}", self.convert(prompt));
         stdout().flush().expect("Can't write to stdout");
 
@@ -305,13 +305,13 @@ impl Dahlia {
 
     /// Resets the formatting back to the default.
     pub fn reset(&self) {
-        print!("{}", self.convert(&format!("{}r", self.marker)));
+        print!("{}", self.convert(format!("{}r", self.marker)));
     }
 
     /// Returns a string with all the possible formatting options.
     pub fn test(&self) -> String {
         self.convert(
-            &"0123456789abcdefg"
+            "0123456789abcdefg"
                 .chars()
                 .map(|ch| format!("{m}{ch}{ch}", m = self.marker))
                 .chain(
@@ -358,8 +358,8 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
         .replace("{b}", b)
 }
 
-fn remove_all_regexes(regexes: &[Regex], string: &str) -> String {
-    regexes.iter().fold(string.to_owned(), |string, pattern| {
+fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
+    regexes.iter().fold(string, |string, pattern| {
         pattern.replace_all(&string, "").into_owned()
     })
 }
@@ -371,7 +371,7 @@ fn remove_all_regexes(regexes: &[Regex], string: &str) -> String {
 /// let green_text = "&2>be me";
 /// assert_eq!(clean(green_text), ">be me");
 /// ```
-pub fn clean(string: &str, marker: char) -> String {
+pub fn clean(string: String, marker: char) -> String {
     remove_all_regexes(&create_patterns(marker), string)
 }
 
@@ -383,7 +383,7 @@ pub fn clean(string: &str, marker: char) -> String {
 /// let green_text = dahlia.convert("&2>be me");
 /// assert_eq!(clean_ansi(green_text), ">be me");
 /// ```
-pub fn clean_ansi(string: &str) -> String {
+pub fn clean_ansi(string: String) -> String {
     remove_all_regexes(&*ANSI_REGEXES, string)
 }
 
@@ -401,7 +401,7 @@ pub fn clean_ansi(string: &str) -> String {
 #[macro_export]
 macro_rules! dprint {
     ($d:expr, $($arg:tt)*) => {
-        print!("{}", $d.convert(&format!($($arg)*)));
+        print!("{}", $d.convert(format!($($arg)*)));
     };
 }
 
@@ -419,7 +419,7 @@ macro_rules! dprint {
 #[macro_export]
 macro_rules! dprintln {
     ($d:expr, $($arg:tt)*) => {
-        println!("{}", $d.convert(&format!($($arg)*)));
+        println!("{}", $d.convert(format!($($arg)*)));
     };
 }
 
@@ -429,18 +429,18 @@ mod test {
 
     #[test]
     fn test_clean() {
-        assert_eq!(clean("hmm &3&oyes&r.", '&'), "hmm yes.")
+        assert_eq!(clean("hmm &3&oyes&r.".into(), '&'), "hmm yes.")
     }
 
     #[test]
     fn test_clean_custom_marker() {
-        assert_eq!(clean("i'm !4!lballing!r!", '!'), "i'm balling!")
+        assert_eq!(clean("i'm !4!lballing!r!".into(), '!'), "i'm balling!")
     }
 
     #[test]
     fn test_clean_ansi() {
         assert_eq!(
-            clean_ansi("hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m"),
+            clean_ansi("hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m".into()),
             "hmm yes."
         )
     }
@@ -450,7 +450,7 @@ mod test {
         let dahlia = Dahlia::new(Depth::High, false, '&');
 
         assert_eq!(
-            dahlia.convert("hmm &3&oyes&r."),
+            dahlia.convert("hmm &3&oyes&r.".into()),
             "hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m"
         )
     }
@@ -460,7 +460,7 @@ mod test {
         let dahlia = Dahlia::new(Depth::High, false, '&');
 
         assert_eq!(
-            dahlia.convert("hmm &~3yes&r."),
+            dahlia.convert("hmm &~3yes&r.".into()),
             "hmm \x1b[48;2;0;170;170myes\x1b[0m.\x1b[0m"
         )
     }
@@ -470,7 +470,7 @@ mod test {
         let dahlia = Dahlia::new(Depth::High, false, '@');
 
         assert_eq!(
-            dahlia.convert("hmm @3@oyes@r."),
+            dahlia.convert("hmm @3@oyes@r.".into()),
             "hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m"
         )
     }
