@@ -47,32 +47,26 @@
 //!
 //! `xxxxxx` represents the hex value of the color.
 
-use phf::{phf_map, Map};
-use regex::{Captures, Regex};
-use std::env;
-use std::io::{stdin, stdout, Write};
+use std::{
+    env,
+    io::{stdin, stdout, Write},
+};
 
 use lazy_static::lazy_static;
+use phf::{phf_map, Map};
+use regex::{Captures, Regex};
 
 /// Specifies usable color depth levels
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub enum Depth {
     /// 3-bit color
-    Low,
+    TTY = 3,
+    /// 4-bit color
+    Low = 4,
     /// 8-bit color
-    Medium,
+    Medium = 8,
     /// 24-bit color (true color)
-    High,
-}
-
-impl Depth {
-    fn to_u8(self) -> u8 {
-        match self {
-            Depth::Low => 3u8,
-            Depth::Medium => 8u8,
-            Depth::High => 24u8,
-        }
-    }
+    High = 24,
 }
 
 const FORMATTERS: Map<&str, &str> = phf_map! {
@@ -84,6 +78,26 @@ const FORMATTERS: Map<&str, &str> = phf_map! {
 };
 
 const COLORS_3BIT: Map<&str, &str> = phf_map! {
+    "0" => "30",
+    "1" => "34",
+    "2" => "32",
+    "3" => "36",
+    "4" => "31",
+    "5" => "35",
+    "6" => "33",
+    "7" => "37",
+    "8" => "30",
+    "9" => "34",
+    "a" => "32",
+    "b" => "34",
+    "c" => "31",
+    "d" => "35",
+    "e" => "33",
+    "f" => "37",
+    "g" => "33"
+};
+
+const COLORS_4BIT: Map<&str, &str> = phf_map! {
     "0" => "30",
     "1" => "34",
     "2" => "32",
@@ -145,14 +159,22 @@ const COLORS_24BIT: Map<&str, [&str; 3]> = phf_map! {
 
 const FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
     3u8 => "\x1b[{}m",
+    4u8 => "\x1b[{}m",
     8u8 => "\x1b[38;5;{}m",
     24u8 => "\x1b[38;2;{r};{g};{b}m"
 };
 
 const BG_FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
     3u8 => "\x1b[{}m",
+    4u8 => "\x1b[{}m",
     8u8 => "\x1b[48;5;{}m",
     24u8 => "\x1b[48;2;{r};{g};{b}m"
+};
+
+const COLORS: Map<u8, &Map<&str, &str>> = phf_map! {
+    3u8 => &COLORS_3BIT,
+    4u8 => &COLORS_4BIT,
+    8u8 => &COLORS_8BIT,
 };
 
 pub struct Dahlia {
@@ -216,10 +238,10 @@ impl Dahlia {
 
         let reset = format!("{}r", self.marker);
 
-        let string = if string.ends_with(reset.as_str()) || self.no_reset {
+        let string = if string.ends_with(&reset) || self.no_reset {
             string
         } else {
-            string + reset.as_str()
+            format!("{string}{reset}")
         };
 
         let replacer = |captures: &Captures| {
@@ -232,7 +254,7 @@ impl Dahlia {
         };
 
         self.patterns.iter().fold(string, |string, pattern| {
-            pattern.replace_all(&string, replacer).to_string()
+            pattern.replace_all(&string, replacer).into_owned()
         })
     }
 
@@ -262,7 +284,7 @@ impl Dahlia {
         } else if let Some(value) = FORMATTERS.get(code) {
             Some(fill_template(formats[&3u8], value))
         } else {
-            let template = formats[&self.depth.to_u8()];
+            let template = formats[&(self.depth as u8)];
 
             if self.depth == Depth::High {
                 let [r, g, b] = COLORS_24BIT.get(code)?;
@@ -270,15 +292,10 @@ impl Dahlia {
                 return Some(fill_rgb_template(template, r, g, b));
             }
 
-            let color_map = match self.depth {
-                Depth::Low => COLORS_3BIT,
-                Depth::Medium => COLORS_8BIT,
-                _ => unreachable!(),
-            };
-
+            let color_map = COLORS[&(self.depth as u8)];
             let mut value = color_map.get(code)?.to_string();
 
-            if self.depth == Depth::Medium && bg {
+            if bg && self.depth <= Depth::Low {
                 value = (value.parse::<u8>().ok()? + 10).to_string()
             };
 
@@ -286,7 +303,7 @@ impl Dahlia {
         }
     }
 
-    /// Resets all modifiers.
+    /// Resets the formatting back to the default.
     pub fn reset(&self) {
         print!("{}", self.convert(format!("{}r", self.marker)));
     }
@@ -296,32 +313,37 @@ impl Dahlia {
         self.convert(
             "0123456789abcdefg"
                 .chars()
-                .map(|ch| format!("{}{ch}{ch}", self.marker))
-                .chain("lmno".chars().map(|ch| format!("{m}r{m}{ch}{ch}", m = self.marker)))
+                .map(|ch| format!("{m}{ch}{ch}", m = self.marker))
+                .chain(
+                    "lmno"
+                        .chars()
+                        .map(|ch| format!("{m}r{m}{ch}{ch}", m = self.marker)),
+                )
                 .collect::<String>(),
         )
+        .to_string()
     }
 }
 
-fn re(string: String) -> Regex {
-    Regex::new(string.as_str()).unwrap()
+fn re(string: &str) -> Regex {
+    Regex::new(string).unwrap()
 }
 
 lazy_static! {
-    static ref ANSI_REGEXES: Vec<Regex> = vec![
-        re(r"\x1b\[(\d+)m".to_string()),
-        re(r"\x1b\[(?:3|4)8;5;(\d+)m".to_string()),
-        re(r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m".to_string()),
-    ];
-    static ref CODE_REGEXES: Vec<&'static str> =
-        vec![r"(~?)([0-9a-gl-or])", r"(~?)\[#([0-9a-fA-F]{6})\]",];
+    static ref ANSI_REGEXES: [Regex; 3] = [
+        r"\x1b\[(\d+)m",
+        r"\x1b\[(?:3|4)8;5;(\d+)m",
+        r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m",
+    ]
+    .map(re);
+    static ref CODE_REGEXES: [&'static str; 2] =
+        [r"(~?)([0-9a-gl-or])", r"(~?)\[#([0-9a-fA-F]{6})\]"];
 }
 
 fn create_patterns(marker: char) -> Vec<Regex> {
     CODE_REGEXES
         .iter()
-        .map(|x| format!("{}{}", marker, x))
-        .map(re)
+        .map(|x| re(&format!("{marker}{x}")))
         .collect()
 }
 
@@ -336,9 +358,9 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
         .replace("{b}", b)
 }
 
-fn remove_all_regexes(regexes: Vec<Regex>, string: String) -> String {
+fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
     regexes.iter().fold(string, |string, pattern| {
-        pattern.replace_all(&string, "").to_string()
+        pattern.replace_all(&string, "").into_owned()
     })
 }
 
@@ -350,7 +372,7 @@ fn remove_all_regexes(regexes: Vec<Regex>, string: String) -> String {
 /// assert_eq!(clean(green_text), ">be me");
 /// ```
 pub fn clean(string: String, marker: char) -> String {
-    remove_all_regexes(create_patterns(marker), string)
+    remove_all_regexes(&create_patterns(marker), string)
 }
 
 /// Removes all ANSI codes from a string.
@@ -362,7 +384,7 @@ pub fn clean(string: String, marker: char) -> String {
 /// assert_eq!(clean_ansi(green_text), ">be me");
 /// ```
 pub fn clean_ansi(string: String) -> String {
-    remove_all_regexes(ANSI_REGEXES.clone(), string)
+    remove_all_regexes(&*ANSI_REGEXES, string)
 }
 
 /// Wrapper over `print!`, takes a Dahlia instance as the first argument
@@ -378,7 +400,7 @@ pub fn clean_ansi(string: String) -> String {
 /// ```
 #[macro_export]
 macro_rules! dprint {
-    ($d:tt, $($arg:tt)*) => {
+    ($d:expr, $($arg:tt)*) => {
         print!("{}", $d.convert(format!($($arg)*)));
     };
 }
@@ -396,7 +418,7 @@ macro_rules! dprint {
 /// ```
 #[macro_export]
 macro_rules! dprintln {
-    ($d:tt, $($arg:tt)*) => {
+    ($d:expr, $($arg:tt)*) => {
         println!("{}", $d.convert(format!($($arg)*)));
     };
 }
@@ -434,6 +456,16 @@ mod test {
     }
 
     #[test]
+    fn test_convert_with_background() {
+        let dahlia = Dahlia::new(Depth::High, false, '&');
+
+        assert_eq!(
+            dahlia.convert("hmm &~3yes&r.".into()),
+            "hmm \x1b[48;2;0;170;170myes\x1b[0m.\x1b[0m"
+        )
+    }
+
+    #[test]
     fn test_convert_custom_marker() {
         let dahlia = Dahlia::new(Depth::High, false, '@');
 
@@ -450,5 +482,16 @@ mod test {
         let test = dahlia.test();
 
         assert_eq!(test, "\x1b[38;2;0;0;0m0\x1b[38;2;0;0;170m1\x1b[38;2;0;170;0m2\x1b[38;2;0;170;170m3\x1b[38;2;170;0;0m4\x1b[38;2;170;0;170m5\x1b[38;2;255;170;0m6\x1b[38;2;170;170;170m7\x1b[38;2;85;85;85m8\x1b[38;2;85;85;255m9\x1b[38;2;85;255;85ma\x1b[38;2;85;255;255mb\x1b[38;2;255;85;85mc\x1b[38;2;255;85;255md\x1b[38;2;255;255;85me\x1b[38;2;255;255;255mf\x1b[38;2;221;214;5mg\x1b[0m\x1b[1ml\x1b[0m\x1b[9mm\x1b[0m\x1b[4mn\x1b[0m\x1b[3mo\x1b[0m")
+    }
+
+    #[test]
+    fn test_macros() {
+        // no output testing, just for compilation check
+
+        let dahlia = Dahlia::new(Depth::High, false, '&');
+        let name = "Bob";
+
+        dprint!(dahlia, "Hi &3{}&r!", name);
+        dprintln!(dahlia, "Hi &3{}&r!", name);
     }
 }
