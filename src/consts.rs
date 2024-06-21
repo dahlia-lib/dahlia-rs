@@ -129,7 +129,7 @@ pub fn fmt_template(name: Depth) -> &'static str {
     }
 }
 
-pub fn background_fmt_template(name: Depth) -> &'static str {
+pub fn fmt_background_template(name: Depth) -> &'static str {
     match name {
         Depth::TTY => "\x1b[{}m",
         Depth::Low => "\x1b[{}m",
@@ -138,7 +138,7 @@ pub fn background_fmt_template(name: Depth) -> &'static str {
     }
 }
 
-pub type ColorCodeMapper = dyn Fn(&str) -> Option<&'static str>;
+pub(crate) type ColorCodeMapper = dyn Fn(&str) -> Option<&'static str>;
 pub fn colors(name: Depth) -> Option<&'static ColorCodeMapper> {
     match name {
         Depth::TTY => Some(&COLORS_3BIT),

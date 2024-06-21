@@ -247,57 +247,30 @@ impl Dahlia {
     }
 
     fn get_ansi(&self, captures: &Captures<'_>) -> String {
-        if let Some(format) = captures.name("fmt") {
-            let format = format.as_str();
-            if let Some(ansis) = formatter(format).or_else(|| reset_codes(format)) {
-                return ansis.iter().fold(
-                    String::with_capacity(ansis.len() * 5),
-                    |mut string, ansi| {
-                        use std::fmt::Write;
-                        // writing to string can't fail
-                        let _ = write!(string, "\x1b[{ansi}m");
-                        string
-                    },
-                );
-            }
+        if let Some(formatter) = captures.name("fmt") {
+            return formatter_to_ansi(formatter);
         }
 
         let bg = captures.name("bg").is_some();
 
-        let formats = if bg {
-            background_fmt_template
+        let templater = if bg {
+            fmt_background_template
         } else {
             fmt_template
         };
 
         if let Some(hex) = captures.name("hex") {
-            let hex = hex.as_str();
-
-            let hex_digits = hex
-                .chars()
-                .map(|ch| ch.to_digit(16))
-                .collect::<Option<Vec<_>>>()
-                .expect("the regex should only match valid hexadecimal digits");
-
-            let [r, g, b] = match &hex_digits[..] {
-                // if there are only 3 digits, "duplicate" each
-                [r, g, b] => [r, g, b].map(|&d| (0x11 * d).to_string()),
-                [r1, r2, g1, g2, b1, b2] => {
-                    [(r1, r2), (g1, g2), (b1, b2)].map(|(h, l)| (h * 0x10 + l).to_string())
-                }
-                _ => unreachable!("the regex should only match codes of length 3 or 6"),
-            };
-
-            return fill_rgb_template(formats(Depth::High), &r, &g, &b);
+            return hex_to_ansi(hex, templater);
         }
 
+        // if it's not a formatter or hex code, it's a color code
         let color = &captures["color"];
 
         if self.depth == Depth::High {
             let [r, g, b] =
                 COLORS_24BIT(color).expect("the regex should match only valid color codes");
 
-            return fill_rgb_template(formats(Depth::High), r, g, b);
+            return fill_rgb_template(templater(Depth::High), r, g, b);
         }
 
         let color_map =
@@ -316,7 +289,7 @@ impl Dahlia {
             mapped.to_string()
         };
 
-        fill_template(formats(self.depth), &value)
+        fill_template(templater(self.depth), &value)
     }
 
     /// Writes the prompt to stdout, then reads a line from input,
@@ -360,6 +333,45 @@ impl Dahlia {
         )
         .into_owned()
     }
+}
+
+fn hex_to_ansi(hex: regex::Match<'_>, formats: fn(Depth) -> &'static str) -> String {
+    let hex = hex.as_str();
+    let hex_digits = hex
+        .chars()
+        .map(|ch| ch.to_digit(16))
+        .collect::<Option<Vec<_>>>()
+        .expect("the regex should only match valid hexadecimal digits");
+
+    let [r, g, b] = match &hex_digits[..] {
+        // if there are only 3 digits, "duplicate" each
+        [r, g, b] => [r, g, b].map(|&d| (0x11 * d).to_string()),
+        [r1, r2, g1, g2, b1, b2] => {
+            [(r1, r2), (g1, g2), (b1, b2)].map(|(h, l)| (h * 0x10 + l).to_string())
+        }
+        _ => unreachable!("the regex should only match codes of length 3 or 6"),
+    };
+
+    fill_rgb_template(formats(Depth::High), &r, &g, &b)
+}
+
+fn formatter_to_ansi(format: regex::Match<'_>) -> String {
+    use std::fmt::Write;
+
+    let format = format.as_str();
+
+    let ansis = formatter(format)
+        .or_else(|| reset_codes(format))
+        .expect("the regex should match only valid formatter codes or reset codes.");
+
+    ansis.iter().fold(
+        String::with_capacity(ansis.len() * 5), // ansi foramt codes are 5 chars long
+        |mut string, ansi| {
+            // writing to string can't fail, and we use it, so we get the format! capability
+            let _ = write!(string, "\x1b[{ansi}m");
+            string
+        },
+    )
 }
 
 impl Default for Dahlia {
