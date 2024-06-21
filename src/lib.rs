@@ -246,17 +246,6 @@ impl Dahlia {
         Cow::Owned(new + tail)
     }
 
-    /// Writes the prompt to stdout, then reads a line from input,
-    /// and returns it (excluding the trailing newline).
-    pub fn input(&self, prompt: &str) -> std::io::Result<String> {
-        print!("{}", self.convert(prompt));
-        stdout().flush()?;
-
-        let mut inp = String::new();
-        stdin().read_line(&mut inp)?;
-        Ok(inp.trim_end().to_owned())
-    }
-
     fn get_ansi(&self, captures: &Captures<'_>) -> String {
         if let Some(format) = captures.name("fmt") {
             let format = format.as_str();
@@ -330,9 +319,30 @@ impl Dahlia {
         fill_template(formats(self.depth), &value)
     }
 
+    /// Writes the prompt to stdout, then reads a line from input,
+    /// and returns it (excluding the trailing newline).
+    pub fn input(&self, prompt: &str) -> std::io::Result<String> {
+        print!("{}", self.convert(prompt));
+        stdout().flush()?;
+
+        let mut inp = String::new();
+        stdin().read_line(&mut inp)?;
+        Ok(inp.trim_end().to_owned())
+    }
+
     /// Resets the formatting back to the default.
     pub fn reset() {
         print!("\x1b[0m");
+    }
+
+    /// Clears the current line
+    pub fn clear_line() {
+        print!("\x1b[2K");
+    }
+
+    /// Clears the screen
+    pub fn clear_screen() {
+        print!("\x1b[2J");
     }
 
     /// Returns a string with all the possible formatting options.
