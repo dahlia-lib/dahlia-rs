@@ -226,7 +226,8 @@ impl Dahlia {
     }
 
     fn unescape<'a>(&self, str: Cow<'a, str>) -> Cow<'a, str> {
-        // PERF: Custom String::replace implementation to get around 2x speed boost
+        // PERF: Custom String::replace implementation based on Regex::replace_all to get
+        // around 2x speed boost
         let mut indices = str.match_indices(self.patterns.escaped()).peekable();
 
         if indices.peek().is_none() {
@@ -248,8 +249,8 @@ impl Dahlia {
     }
 
     fn get_ansi(&self, captures: &Captures<'_>) -> String {
-        if let Some(formatter) = captures.name("fmt") {
-            return formatter_to_ansi(formatter.as_str());
+        if let Some(format) = captures.name("fmt") {
+            return format_to_ansi(format.as_str());
         }
 
         let bg = captures.name("bg").is_some();
@@ -349,7 +350,7 @@ impl Dahlia {
     }
 }
 
-fn hex_to_ansi(hex: &str, formats: fn(Depth) -> &'static str) -> String {
+fn hex_to_ansi(hex: &str, templater: fn(Depth) -> &'static str) -> String {
     let hex_digits = hex
         .chars()
         .map(|ch| ch.to_digit(16))
@@ -365,10 +366,10 @@ fn hex_to_ansi(hex: &str, formats: fn(Depth) -> &'static str) -> String {
         _ => unreachable!("the regex should only match codes of length 3 or 6"),
     };
 
-    fill_rgb_template(formats(Depth::High), &r, &g, &b)
+    fill_rgb_template(templater(Depth::High), &r, &g, &b)
 }
 
-fn formatter_to_ansi(format: &str) -> String {
+fn format_to_ansi(format: &str) -> String {
     use std::fmt::Write;
 
     let ansis = formatter(format)
