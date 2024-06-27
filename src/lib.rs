@@ -56,7 +56,6 @@ use std::{
     io::{stdin, stdout, Write},
 };
 
-use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 #[cfg(test)]
@@ -389,22 +388,6 @@ impl Default for Dahlia {
     fn default() -> Self {
         Dahlia::new(None, true, '&')
     }
-}
-
-fn re(string: &str) -> Regex {
-    Regex::new(string).expect("Hard coded regexes are always valid.")
-}
-
-lazy_static! {
-    // From spec (https://github.com/dahlia-lib/spec/blob/v1.0.0/SPECIFICATION.md#clean_ansi)
-    static ref ANSI_REGEX: Regex = re(r"[\u001B\u009B][\[\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*|[a-zA-Z\d]+(?:;[-a-zA-Z\d\/#&.:=?%@~_]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))");
-
-    static ref CODE_REGEX: String = format!(
-        "(?<bg>~)?(?:{colors}|{hex})|{formatters}",
-        colors = r"(?<color>[0-9a-f])",
-        hex = r"#(?<hex>[0-9a-f]{3}|[0-9a-f]{6});",
-        formatters = r"(?<fmt>[h-oR]|r[bcfh-o])"
-    );
 }
 
 fn fill_template(template: &str, value: &str) -> String {
