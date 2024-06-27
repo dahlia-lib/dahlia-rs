@@ -320,6 +320,19 @@ impl Dahlia {
         print!("\x1b[2J");
     }
 
+    /// Escape all format markers in a string
+    ///
+    /// # Example
+    /// ```rust
+    /// # use dahlia::Dahlia;
+    /// let d = Dahlia::default();
+    /// let str = d.escape("&aHello &cWorld");
+    /// assert_eq!(str, "&_aHello &_cWorld");
+    /// ```
+    pub fn escape(&self, str: &str) -> String {
+        str.replace(self.marker, self.patterns.escaped())
+    }
+
     /// Returns a string with all the possible formatting options.
     pub fn test(&self) -> String {
         self.convert(
