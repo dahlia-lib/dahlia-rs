@@ -71,6 +71,10 @@ pub use depth::Depth;
 
 use crate::depth::InferrenceResult;
 
+const ESCAPE_IN_REGEX: [char; 14] = [
+    '[', ']', '(', ')', '{', '}', '*', '+', '.', '$', '^', '\\', '|', '?',
+];
+
 struct Patterns {
     codes: Regex,
     escaped: String,
@@ -78,12 +82,10 @@ struct Patterns {
 
 impl Patterns {
     pub fn new(marker: char) -> Self {
-        let escaped_marker = [
-            '[', ']', '(', ')', '{', '}', '*', '+', '.', '$', '^', '\\', '|', '?',
-        ]
-        .contains(&marker)
-        .then(|| format!(r"\{marker}"))
-        .unwrap_or_else(|| marker.to_string());
+        let escaped_marker = ESCAPE_IN_REGEX
+            .contains(&marker)
+            .then(|| format!(r"\{marker}"))
+            .unwrap_or_else(|| marker.to_string());
 
         let regex = format!("{escaped_marker}(?:{})", *CODE_REGEX);
 
@@ -248,7 +250,7 @@ impl Dahlia {
 
     fn get_ansi(&self, captures: &Captures<'_>) -> String {
         if let Some(formatter) = captures.name("fmt") {
-            return formatter_to_ansi(formatter);
+            return formatter_to_ansi(formatter.as_str());
         }
 
         let bg = captures.name("bg").is_some();
@@ -260,7 +262,7 @@ impl Dahlia {
         };
 
         if let Some(hex) = captures.name("hex") {
-            return hex_to_ansi(hex, templater);
+            return hex_to_ansi(hex.as_str(), templater);
         }
 
         // if it's not a formatter or hex code, it's a color code
@@ -335,8 +337,7 @@ impl Dahlia {
     }
 }
 
-fn hex_to_ansi(hex: regex::Match<'_>, formats: fn(Depth) -> &'static str) -> String {
-    let hex = hex.as_str();
+fn hex_to_ansi(hex: &str, formats: fn(Depth) -> &'static str) -> String {
     let hex_digits = hex
         .chars()
         .map(|ch| ch.to_digit(16))
@@ -355,10 +356,8 @@ fn hex_to_ansi(hex: regex::Match<'_>, formats: fn(Depth) -> &'static str) -> Str
     fill_rgb_template(formats(Depth::High), &r, &g, &b)
 }
 
-fn formatter_to_ansi(format: regex::Match<'_>) -> String {
+fn formatter_to_ansi(format: &str) -> String {
     use std::fmt::Write;
-
-    let format = format.as_str();
 
     let ansis = formatter(format)
         .or_else(|| reset_codes(format))
@@ -394,8 +393,6 @@ lazy_static! {
         hex = r"#(?<hex>[0-9a-f]{3}|[0-9a-f]{6});",
         formatters = r"(?<fmt>[h-oR]|r[bcfh-o])"
     );
-
-    static ref ESCAPE_REGEX: Regex = re(r"[\(\)\[\{*+.$^\\|?]");
 }
 
 fn fill_template(template: &str, value: &str) -> String {
