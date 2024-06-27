@@ -373,7 +373,6 @@ fn formatter_to_ansi(format: &str) -> String {
     use std::fmt::Write;
 
     let ansis = formatter(format)
-        .or_else(|| reset_codes(format))
         .expect("the regex should match only valid formatter codes or reset codes.");
 
     ansis.iter().fold(

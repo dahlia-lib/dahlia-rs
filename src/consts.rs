@@ -2,32 +2,26 @@ use crate::Depth;
 
 pub fn formatter(name: &str) -> Option<&'static [&'static str]> {
     match name {
-        "h" => Some(&["8"]), // hidden
-        "i" => Some(&["7"]), // inverse
-        "j" => Some(&["2"]), // dim
-        "k" => Some(&["5"]), // blinking
-        "l" => Some(&["1"]), // bold
-        "m" => Some(&["9"]), // strikethrough
-        "n" => Some(&["4"]), // underline
-        "o" => Some(&["3"]), // italic
-        _ => None,
-    }
-}
-
-pub fn reset_codes(name: &str) -> Option<&'static [&'static str]> {
-    match name {
-        "R" => Some(&["0"]),         // full
-        "rf" => Some(&["39"]),       // foreground
-        "rb" => Some(&["49"]),       // background
-        "rc" => Some(&["39", "49"]), // color
-        "rh" => Some(&["28"]),       // hidden
-        "ri" => Some(&["27"]),       // inverse
-        "rj" => Some(&["22"]),       // dim
-        "rk" => Some(&["25"]),       // blinking
-        "rl" => Some(&["22"]),       // bold
-        "rm" => Some(&["29"]),       // strikethrough
-        "rn" => Some(&["24"]),       // underline
-        "ro" => Some(&["23"]),       // italic
+        "h" => Some(&["8"]),         // hidden
+        "i" => Some(&["7"]),         // inverse
+        "j" => Some(&["2"]),         // dim
+        "k" => Some(&["5"]),         // blinking
+        "l" => Some(&["1"]),         // bold
+        "m" => Some(&["9"]),         // strikethrough
+        "n" => Some(&["4"]),         // underline
+        "o" => Some(&["3"]),         // italic
+        "R" => Some(&["0"]),         // full reset
+        "rf" => Some(&["39"]),       // reset foreground
+        "rb" => Some(&["49"]),       // reset background
+        "rc" => Some(&["39", "49"]), // reset color
+        "rh" => Some(&["28"]),       // reset hidden
+        "ri" => Some(&["27"]),       // reset inverse
+        "rj" => Some(&["22"]),       // reset dim
+        "rk" => Some(&["25"]),       // reset blinking
+        "rl" => Some(&["22"]),       // reset bold
+        "rm" => Some(&["29"]),       // reset strikethrough
+        "rn" => Some(&["24"]),       // reset underline
+        "ro" => Some(&["23"]),       // reset italic
         _ => None,
     }
 }
