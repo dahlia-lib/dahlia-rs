@@ -412,6 +412,9 @@ fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
 ///
 /// ```rust
 /// # use dahlia::{Dahlia, Depth, clean_ansi};
+/// let pink_text = "\x1b[38;2;255;0;255mpink";
+/// assert_eq!(clean_ansi(&pink_text), "pink");
+///
 /// let dahlia = Dahlia::new(Some(Depth::High), false, '&');
 /// let green_text = dahlia.convert("&2>be me");
 /// assert_eq!(clean_ansi(&green_text), ">be me");
