@@ -217,13 +217,15 @@ impl Dahlia {
 
         let buffer = String::with_capacity(str.len());
 
-        let (new, last_match) = indices.fold((buffer, 0), |(new, last_match), (start, chunk)| {
+        let (new, last_match) = indices.fold((buffer, 0), |(acc, last_match), (start, chunk)| {
             (
-                new + &str[last_match..start] + &chunk[..chunk.len() - 1],
+                // accumulator + string since the previous match + the match without the _
+                acc + &str[last_match..start] + &chunk[..chunk.len() - 1],
                 start + chunk.len(),
             )
         });
 
+        // rest of the string
         let tail = &str[last_match..];
 
         Cow::Owned(new + tail)
