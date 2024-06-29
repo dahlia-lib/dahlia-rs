@@ -1,7 +1,7 @@
 //! A simple text formatting package, inspired by the game Minecraft.
 //!
 //! Text is formatted in a similar way to in the game. With Dahlia, it is
-//! formatted by typing a marker (`&` by default but can any single character)
+//! formatted by typing a marker (`&` by default but can be any single character)
 //! followed by a format code and finally the text to be formatted.
 //!
 //! ## Color Format Codes
@@ -42,8 +42,7 @@
 //!
 //! For colors by hex code, use square brackets containing the hex code inside of it.
 //!
-//! - Foreground: `&#xxx;`
-//! - Foreground: `&#xxxxxx;`
+//! - Foreground: `&#xxx;` or `&#xxxxxx;`
 //!
 //! - Background: `&~#xxxxxx;`
 //!
@@ -376,7 +375,7 @@ fn format_to_ansi(format: &str) -> String {
         .expect("the regex should match only valid formatter codes or reset codes.");
 
     ansis.iter().fold(
-        String::with_capacity(ansis.len() * 5), // ansi foramt codes are 5 chars long
+        String::with_capacity(ansis.len() * 5), // ansi format codes are 5 chars long
         |mut string, ansi| {
             // writing to string can't fail, and we use it, so we get the format! capability
             let _ = write!(string, "\x1b[{ansi}m");

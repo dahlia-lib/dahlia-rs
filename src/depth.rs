@@ -38,7 +38,7 @@ impl Depth {
                 InferrenceResult::Color(Self::High)
             }
             Ok(term) if term.contains("256") => InferrenceResult::Color(Self::Medium),
-            _ => InferrenceResult::Color(Self::TTY),
+            _ => InferrenceResult::Color(Self::Low),
         }
     }
 }
