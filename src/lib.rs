@@ -242,21 +242,6 @@ impl Dahlia {
         Ok(inp.trim_end().to_owned())
     }
 
-    /// Resets the formatting back to the default.
-    pub fn reset() {
-        print!("\x1b[0m");
-    }
-
-    /// Clears the current line
-    pub fn clear_line() {
-        print!("\x1b[2K");
-    }
-
-    /// Clears the screen
-    pub fn clear_screen() {
-        print!("\x1b[2J");
-    }
-
     /// Escape all format markers in a string
     ///
     /// # Example
