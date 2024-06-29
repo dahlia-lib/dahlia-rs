@@ -13,32 +13,25 @@ pub enum Depth {
     High = 24,
 }
 
-/// Result of trying to inferr the best supported color depth for current terminal.
-///
-/// Either produces a color depth or `NoColor` for dumb terminals.
-pub enum InferrenceResult {
-    Color(Depth),
-    NoColor,
-}
-
 impl Depth {
     /// Try to inferr the best supported color depth for current terminal.
     ///
     /// Checks `COLORTERM` and `TERM` environment variables.
     ///
-    /// Either returns a color depth or `NoColor` if 'dumb' terminal is detected.
-    pub fn try_inferr() -> InferrenceResult {
-        if matches!(env::var("COLORTERM"), Ok(colorterm) if colorterm == "24bit") {
-            return InferrenceResult::Color(Self::High);
+    /// Either returns a color depth or `None` if 'dumb' terminal is detected.
+    pub fn try_infer() -> Option<Depth> {
+        if env::var("COLORTERM").is_ok_and(|value| ["truecolor", "24bit"].contains(&value.as_str()))
+        {
+            return Some(Self::High);
         }
 
         match env::var("TERM") {
-            Ok(term) if term == "dumb" => InferrenceResult::NoColor,
+            Ok(term) if term == "dumb" => None,
             Ok(term) if term.contains("24bit") || term == "terminator" || term == "mosh" => {
-                InferrenceResult::Color(Self::High)
+                Some(Self::High)
             }
-            Ok(term) if term.contains("256") => InferrenceResult::Color(Self::Medium),
-            _ => InferrenceResult::Color(Self::Low),
+            Ok(term) if term.contains("256") => Some(Self::Medium),
+            _ => Some(Self::Low),
         }
     }
 }

@@ -67,8 +67,6 @@ mod depth;
 
 pub use depth::Depth;
 
-use crate::depth::InferrenceResult;
-
 const ESCAPE_IN_REGEX: [char; 14] = [
     '[', ']', '(', ')', '{', '}', '*', '+', '.', '$', '^', '\\', '|', '?',
 ];
@@ -104,12 +102,10 @@ impl Patterns {
 }
 
 pub struct Dahlia {
-    // Specifies what ANSI color set to use (in bits)
-    depth: Depth,
+    // Specifies what ANSI color set to use (in bits). If None, convert acts as clean.
+    depth: Option<Depth>,
     // When true, doesn't add an "&r" at the end when converting strings.
     auto_reset: bool,
-    // When true, `Dahlia.convert` is equivalent to `clean`
-    no_color: bool,
     // Search patterns used by the Dahlia instance
     patterns: Patterns,
     // Marker used for formatting
@@ -118,30 +114,20 @@ pub struct Dahlia {
 
 impl Dahlia {
     pub fn new(depth: Option<Depth>, auto_reset: bool, marker: char) -> Self {
-        let mut no_color = env::var("NO_COLOR").is_ok_and(|value| !value.is_empty());
+        let no_color = env::var("NO_COLOR").is_ok_and(|value| !value.is_empty());
 
-        let depth = match depth {
-            Some(depth) => depth,
-            None => match Depth::try_inferr() {
-                InferrenceResult::NoColor => {
-                    no_color = true;
-                    Depth::High
-                }
-                InferrenceResult::Color(depth) => depth,
-            },
-        };
+        let depth = if no_color { None } else { depth };
 
         Self {
             depth,
             auto_reset,
-            no_color,
             patterns: Patterns::new(marker),
             marker,
         }
     }
 
     pub fn with_depth(mut self, depth: Depth) -> Self {
-        self.depth = depth;
+        self.set_depth(depth);
         self
     }
 
@@ -161,15 +147,11 @@ impl Dahlia {
     }
 
     pub fn set_depth(&mut self, depth: Depth) {
-        self.depth = depth;
+        self.depth = Some(depth);
     }
 
     pub fn set_auto_depth(&mut self) {
-        if let InferrenceResult::Color(depth) = Depth::try_inferr() {
-            self.depth = depth;
-        } else {
-            self.no_color = true;
-        }
+        self.depth = Depth::try_infer();
     }
 
     pub fn set_auto_reset(&mut self, auto_reset: bool) {
@@ -205,13 +187,13 @@ impl Dahlia {
     /// assert_eq!(&text, "\x1b[38;2;85;255;85mHello \x1b[38;2;255;85;85mWorld\x1b[0m");
     /// ```
     pub fn convert<'a>(&self, str: &'a str) -> Cow<'a, str> {
-        if self.no_color {
-            return self.clean(str);
+        if let Some(depth) = self.depth {
+            let replacer = |captures: &Captures<'_>| get_ansi(captures, depth);
+            let converted = self.patterns.codes().replace_all(str, replacer);
+            self.finalize(converted)
+        } else {
+            self.clean(str)
         }
-
-        let replacer = |captures: &Captures<'_>| self.get_ansi(captures);
-        let converted = self.patterns.codes().replace_all(str, replacer);
-        self.finalize(converted)
     }
 
     fn finalize<'a>(&self, str: Cow<'a, str>) -> Cow<'a, str> {
@@ -245,52 +227,6 @@ impl Dahlia {
         let tail = &str[last_match..];
 
         Cow::Owned(new + tail)
-    }
-
-    fn get_ansi(&self, captures: &Captures<'_>) -> String {
-        if let Some(format) = captures.name("fmt") {
-            return format_to_ansi(format.as_str());
-        }
-
-        let bg = captures.name("bg").is_some();
-
-        let templater = if bg {
-            fmt_background_template
-        } else {
-            fmt_template
-        };
-
-        if let Some(hex) = captures.name("hex") {
-            return hex_to_ansi(hex.as_str(), templater);
-        }
-
-        // if it's not a formatter or hex code, it's a color code
-        let color = &captures["color"];
-
-        if self.depth == Depth::High {
-            let [r, g, b] =
-                COLORS_24BIT(color).expect("the regex should match only valid color codes");
-
-            return fill_rgb_template(templater(Depth::High), r, g, b);
-        }
-
-        let color_map =
-            colors(self.depth).expect("at this point depth should only be TTY, Low or Medium");
-
-        let mapped = color_map(color).expect("the regex should match only valid color codes");
-
-        // low bit depths use different way of specifying background
-        let value = if bg && self.depth <= Depth::Low {
-            (mapped
-                .parse::<u8>()
-                .expect("color tables should contain valid numbers")
-                + 10)
-                .to_string()
-        } else {
-            mapped.to_string()
-        };
-
-        fill_template(templater(self.depth), &value)
     }
 
     /// Writes the prompt to stdout, then reads a line from input,
@@ -347,6 +283,50 @@ impl Dahlia {
         )
         .into_owned()
     }
+}
+
+fn get_ansi(captures: &Captures<'_>, depth: Depth) -> String {
+    if let Some(format) = captures.name("fmt") {
+        return format_to_ansi(format.as_str());
+    }
+
+    let bg = captures.name("bg").is_some();
+
+    let templater = if bg {
+        fmt_background_template
+    } else {
+        fmt_template
+    };
+
+    if let Some(hex) = captures.name("hex") {
+        return hex_to_ansi(hex.as_str(), templater);
+    }
+
+    // if it's not a formatter or hex code, it's a color code
+    let color = &captures["color"];
+
+    if depth == Depth::High {
+        let [r, g, b] = COLORS_24BIT(color).expect("the regex should match only valid color codes");
+
+        return fill_rgb_template(templater(Depth::High), r, g, b);
+    }
+
+    let color_map = colors(depth).expect("at this point depth should only be TTY, Low or Medium");
+
+    let mapped = color_map(color).expect("the regex should match only valid color codes");
+
+    // low bit depths use different way of specifying background
+    let value = if bg && depth <= Depth::Low {
+        (mapped
+            .parse::<u8>()
+            .expect("color tables should contain valid numbers")
+            + 10)
+            .to_string()
+    } else {
+        mapped.to_string()
+    };
+
+    fill_template(templater(depth), &value)
 }
 
 fn hex_to_ansi(hex: &str, templater: fn(Depth) -> &'static str) -> String {

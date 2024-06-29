@@ -83,13 +83,13 @@ mod convert {
     parametric_test! {
         handles_depth,
         [
-            (tty, Depth::TTY, "\x1b[33m\x1b[4munderlined\x1b[0m \x1b[43myellow"),
-            (low, Depth::Low,"\u{1b}[93m\u{1b}[4munderlined\u{1b}[0m \u{1b}[103myellow"),
-            (medium, Depth::Medium, "\x1b[38;5;227m\x1b[4munderlined\x1b[0m \x1b[48;5;227myellow"),
-            (high, Depth::High,"\x1b[38;2;255;255;85m\x1b[4munderlined\x1b[0m \x1b[48;2;255;255;85myellow"),
+            (tty, Some(Depth::TTY), "\x1b[33m\x1b[4munderlined\x1b[0m \x1b[43myellow"),
+            (low, Some(Depth::Low),"\x1b[93m\x1b[4munderlined\x1b[0m \x1b[103myellow"),
+            (medium, Some(Depth::Medium), "\x1b[38;5;227m\x1b[4munderlined\x1b[0m \x1b[48;5;227myellow"),
+            (high, Some(Depth::High),"\x1b[38;2;255;255;85m\x1b[4munderlined\x1b[0m \x1b[48;2;255;255;85myellow"),
+            (none, None::<Depth>, "underlined yellow"),
         ],
-        |depth| Dahlia::new(Some(depth), false, '&').convert("&e&nunderlined&R &~eyellow")
-
+        |depth| Dahlia::new(depth, false, '&').convert("&e&nunderlined&R &~eyellow")
     }
 
     parametric_test! {
