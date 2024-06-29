@@ -254,22 +254,6 @@ impl Dahlia {
     pub fn escape(&self, str: &str) -> String {
         str.replace(self.marker, self.patterns.escaped())
     }
-
-    /// Returns a string with all the possible formatting options.
-    pub fn test(&self) -> String {
-        self.convert(
-            &"0123456789abcdef"
-                .chars()
-                .map(|ch| format!("{m}{ch}{ch}", m = self.marker))
-                .chain(
-                    "hijklmno"
-                        .chars()
-                        .map(|ch| format!("{m}R{m}{ch}{ch}", m = self.marker)),
-                )
-                .collect::<String>(),
-        )
-        .into_owned()
-    }
 }
 
 fn get_ansi(captures: &Captures<'_>, depth: Depth) -> String {
