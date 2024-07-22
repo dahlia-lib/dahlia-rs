@@ -4,51 +4,85 @@
 //! formatted by typing a marker (`&` by default but can be any single character)
 //! followed by a format code and finally the text to be formatted.
 //!
+//! ## Example
+//!
+//! ```rust
+//! use dahlia::{Dahlia, dprintln};
+//!
+//! let dahlia = Dahlia::new().with_auto_depth();
+//!
+//! // Print "Hello, world!" in green bold with "world" underlined
+//! let formatted = dahlia.convert("&2&lHello, &nworld!");
+//!
+//! // Convenience macro to print text with println! like syntax
+//! let name = "David";
+//! dprintln!(dahlia, "&2Hello, {name}!"); // green "Hello, David!"
+//!
+//! // Remove formatting from the text with `clean`
+//! assert_eq!(dahlia.clean("&2Hello, &lworld!"), "Hello, world!");
+//!
+//! // Use `_` to escape the marker
+//! assert_eq!(dahlia.convert("&_2Hello!"), "&2Hello!");
+//! ```
+//!
+//! ## Specification
+//!
+//! The library is an implementation of the [Dahlia specification](https://github.com/dahlia-lib/spec).
+//! Below is a short summary.
+//!
 //! ## Color Format Codes
 //!
 //! Each digit/letter corresponds to a hex value (dependent on the color depth). The coloring can
 //! be applied to the background if a `~` is inserted between the marker and the code.
 //!
-//! Name       | Dahlia | ANSI 3-bit | ANSI 4-bit | ANSI 8-bit | RGB             | HEX
-//! :--------- | :----: | :--------: | :--------: | :--------: | :-------------: | :------:
-//! Black      | `0`    | 30         | 30         | 0          | (0, 0, 0)       | `#000000`
-//! Blue       | `1`    | 34         | 34         | 19         | (0, 0, 170)     | `#0000aa`
-//! Green      | `2`    | 32         | 32         | 34         | (0, 170, 0)     | `#00aa00`
-//! Cyan       | `3`    | 36         | 36         | 37         | (0, 170, 170)   | `#00aaaa`
-//! Red        | `4`    | 31         | 31         | 124        | (170, 0, 0)     | `#aa0000`
-//! Purple     | `5`    | 35         | 35         | 127        | (170, 0, 170)   | `#aa00aa`
-//! Orange     | `6`    | 33         | 33         | 214        | (255, 170, 0)   | `#ffaa00`
-//! Light gray | `7`    | 37         | 37         | 248        | (170, 170, 170) | `#aaaaaa`
-//! Gray       | `8`    | 30         | 90         | 240        | (85, 85, 85)    | `#555555`
-//! Light blue | `9`    | 34         | 94         | 147        | (85, 85, 255)   | `#5555ff`
-//! Lime       | `a`    | 32         | 92         | 83         | (85, 255, 85)   | `#55ff55`
-//! Turqoise   | `b`    | 34         | 96         | 87         | (85, 255, 255)  | `#55ffff`
-//! Light red  | `c`    | 31         | 91         | 203        | (255, 85, 85)   | `#ff5555`
-//! Pink       | `d`    | 35         | 95         | 207        | (255, 85, 255)  | `#ff55ff`
-//! Yellow     | `e`    | 33         | 93         | 227        | (255, 255, 85)  | `#ffff55`
-//! White      | `f`    | 37         | 97         | 15         | (255, 255, 255) | `#ffffff`
+//! | Name       | Dahlia | ANSI 3-bit | ANSI 4-bit | ANSI 8-bit |       RGB       |    HEX    |
+//! | :--------- | :----: | :--------: | :--------: | :--------: | :-------------: | :------:  |
+//! | Black      |  `0`   |     30     |     30     |      0     |    (0, 0, 0)    | `#000000` |
+//! | Blue       |  `1`   |     34     |     34     |     19     |   (0, 0, 170)   | `#0000aa` |
+//! | Green      |  `2`   |     32     |     32     |     34     |   (0, 170, 0)   | `#00aa00` |
+//! | Cyan       |  `3`   |     36     |     36     |     37     |  (0, 170, 170)  | `#00aaaa` |
+//! | Red        |  `4`   |     31     |     31     |    124     |   (170, 0, 0)   | `#aa0000` |
+//! | Purple     |  `5`   |     35     |     35     |    127     |  (170, 0, 170)  | `#aa00aa` |
+//! | Orange     |  `6`   |     33     |     33     |    214     |  (255, 170, 0)  | `#ffaa00` |
+//! | Light gray |  `7`   |     37     |     37     |    248     | (170, 170, 170) | `#aaaaaa` |
+//! | Gray       |  `8`   |     30     |     90     |    240     |  (85, 85, 85)   | `#555555` |
+//! | Light blue |  `9`   |     34     |     94     |    147     |  (85, 85, 255)  | `#5555ff` |
+//! | Lime       |  `a`   |     32     |     92     |     83     |  (85, 255, 85)  | `#55ff55` |
+//! | Turqoise   |  `b`   |     34     |     96     |     87     | (85, 255, 255)  | `#55ffff` |
+//! | Light red  |  `c`   |     31     |     91     |    203     |  (255, 85, 85)  | `#ff5555` |
+//! | Pink       |  `d`   |     35     |     95     |    207     | (255, 85, 255)  | `#ff55ff` |
+//! | Yellow     |  `e`   |     33     |     93     |    227     | (255, 255, 85)  | `#ffff55` |
+//! | White      |  `f`   |     37     |     97     |     15     | (255, 255, 255) | `#ffffff` |
 //!
 //! ## Formatting Codes
 //!
-//! Code | Result
-//! --- | ---
-//! `l` | Bold
-//! `m` | Strikethrough
-//! `n` | Underline
-//! `o` | Italic
-//! `r` | Reset formatting
+//! | Code | Result              |
+//! | ---- | ------------------- |
+//! | `l`  | Bold                |
+//! | `m`  | Strikethrough       |
+//! | `n`  | Underline           |
+//! | `o`  | Italic              |
+//! | `R`  | Reset formatting    |
+//! | `rf` | Reset foreground    |
+//! | `rb` | Reset background    |
+//! | `rc` | Reset color         |
+//! | `rh` | Reset hidden        |
+//! | `ri` | Reset inverse       |
+//! | `rj` | Reset dim           |
+//! | `rk` | Reset blinking      |
+//! | `rl` | Reset bold          |
+//! | `rm` | Reset strikethrough |
+//! | `rn` | Reset underline     |
+//! | `ro` | Reset italic        |
 //!
 //! ## Custom Colors
 //!
 //! For colors by hex code, use square brackets containing the hex code inside of it.
 //!
 //! - Foreground: `&#xxx;` or `&#xxxxxx;`
-//!
-//! - Background: `&~#xxxxxx;`
+//! - Background: `&~#xxx;` or `&~#xxxxxx;`
 //!
 //! `xxx` and `xxxxxx` represents the hex value of the color in 12/24 bits precision respectively.
-#![allow(non_snake_case)]
-
 use std::{
     borrow::Cow,
     char, env,

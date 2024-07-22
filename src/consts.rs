@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 use crate::Depth;
 
 pub fn formatter(name: &str) -> Option<&'static [&'static str]> {
