@@ -27,7 +27,12 @@ impl Depth {
 
         match env::var("TERM") {
             Ok(term) if term == "dumb" => None,
-            Ok(term) if term.contains("24bit") || term == "terminator" || term == "mosh" => {
+            Ok(term)
+                if term.contains("24bit")
+                    || term.contains("24-bit")
+                    || term == "terminator"
+                    || term == "mosh" =>
+            {
                 Some(Self::High)
             }
             Ok(term) if term.contains("256") => Some(Self::Medium),
