@@ -231,7 +231,7 @@ impl Dahlia {
     }
 
     fn finalize<'a>(&self, str: Cow<'a, str>) -> Cow<'a, str> {
-        let str = if !str.ends_with("\x1b[0m") && self.auto_reset {
+        let str = if self.auto_reset && !str.ends_with("\x1b[0m") {
             str + "\x1b[0m"
         } else {
             str

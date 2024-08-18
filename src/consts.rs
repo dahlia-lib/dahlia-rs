@@ -1,4 +1,7 @@
 #![allow(non_snake_case)]
+use lazy_static::lazy_static;
+use regex::Regex;
+
 use crate::Depth;
 
 pub fn formatter(name: &str) -> Option<&'static [&'static str]> {
@@ -143,8 +146,6 @@ pub fn colors(name: Depth) -> Option<&'static ColorCodeMapper> {
     }
 }
 
-use lazy_static::lazy_static;
-use regex::Regex;
 fn re(string: &str) -> Regex {
     Regex::new(string).expect("Hard coded regexes are always valid.")
 }
