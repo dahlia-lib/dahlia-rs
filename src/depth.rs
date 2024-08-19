@@ -4,7 +4,7 @@ use std::env;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub enum Depth {
     /// 3-bit color
-    TTY = 3,
+    Tty = 3,
     /// 4-bit color
     Low = 4,
     /// 8-bit color
@@ -14,7 +14,7 @@ pub enum Depth {
 }
 
 impl Depth {
-    /// Try to inferr the best supported color depth for current terminal.
+    /// Try to infer the best supported color depth for current terminal.
     ///
     /// Checks `COLORTERM` and `TERM` environment variables.
     ///
@@ -46,7 +46,7 @@ impl TryFrom<u8> for Depth {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            3 => Ok(Self::TTY),
+            3 => Ok(Self::Tty),
             4 => Ok(Self::Low),
             8 => Ok(Self::Medium),
             24 => Ok(Self::High),
@@ -60,11 +60,11 @@ impl TryFrom<&str> for Depth {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value.to_ascii_lowercase().as_str() {
-            "3" => Ok(Self::TTY),
+            "3" => Ok(Self::Tty),
             "4" => Ok(Self::Low),
             "8" => Ok(Self::Medium),
             "24" => Ok(Self::High),
-            "tty" => Ok(Self::TTY),
+            "tty" => Ok(Self::Tty),
             "low" => Ok(Self::Low),
             "medium" => Ok(Self::Medium),
             "high" => Ok(Self::High),

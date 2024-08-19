@@ -1,5 +1,6 @@
-use super::*;
 use paste::paste;
+
+use super::*;
 
 /// Create a parametric test.
 macro_rules! parametric_test {
@@ -83,7 +84,7 @@ mod convert {
     parametric_test! {
         handles_depth,
         [
-            (tty, Some(Depth::TTY), "\x1b[33m\x1b[4munderlined\x1b[0m \x1b[43myellow"),
+            (tty, Some(Depth::Tty), "\x1b[33m\x1b[4munderlined\x1b[0m \x1b[43myellow"),
             (low, Some(Depth::Low),"\x1b[93m\x1b[4munderlined\x1b[0m \x1b[103myellow"),
             (medium, Some(Depth::Medium), "\x1b[38;5;227m\x1b[4munderlined\x1b[0m \x1b[48;5;227myellow"),
             (high, Some(Depth::High),"\x1b[38;2;255;255;85m\x1b[4munderlined\x1b[0m \x1b[48;2;255;255;85myellow"),

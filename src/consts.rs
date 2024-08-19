@@ -120,7 +120,7 @@ pub fn COLORS_24BIT(name: &str) -> Option<[&'static str; 3]> {
 
 pub fn fmt_template(name: Depth) -> &'static str {
     match name {
-        Depth::TTY => "\x1b[{}m",
+        Depth::Tty => "\x1b[{}m",
         Depth::Low => "\x1b[{}m",
         Depth::Medium => "\x1b[38;5;{}m",
         Depth::High => "\x1b[38;2;{r};{g};{b}m",
@@ -129,7 +129,7 @@ pub fn fmt_template(name: Depth) -> &'static str {
 
 pub fn fmt_background_template(name: Depth) -> &'static str {
     match name {
-        Depth::TTY => "\x1b[{}m",
+        Depth::Tty => "\x1b[{}m",
         Depth::Low => "\x1b[{}m",
         Depth::Medium => "\x1b[48;5;{}m",
         Depth::High => "\x1b[48;2;{r};{g};{b}m",
@@ -139,7 +139,7 @@ pub fn fmt_background_template(name: Depth) -> &'static str {
 pub(crate) type ColorCodeMapper = dyn Fn(&str) -> Option<&'static str>;
 pub fn colors(name: Depth) -> Option<&'static ColorCodeMapper> {
     match name {
-        Depth::TTY => Some(&COLORS_3BIT),
+        Depth::Tty => Some(&COLORS_3BIT),
         Depth::Low => Some(&COLORS_4BIT),
         Depth::Medium => Some(&COLORS_8BIT),
         _ => None,

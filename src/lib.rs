@@ -121,7 +121,7 @@ impl Patterns {
 
         Self {
             codes: Regex::new(&regex)
-                .expect("The pattern regex should be valid and properly escaped."),
+                .expect("the pattern regex should be valid and properly escaped."),
             escaped: format!("{marker}_"),
         }
     }
