@@ -1,407 +1,424 @@
 //! A simple text formatting package, inspired by the game Minecraft.
 //!
 //! Text is formatted in a similar way to in the game. With Dahlia, it is
-//! formatted by typing a marker (`&` by default in the original implementation)
+//! formatted by typing a marker (`&` by default but can be any single character)
 //! followed by a format code and finally the text to be formatted.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use dahlia::{Dahlia, dprintln};
+//!
+//! let dahlia = Dahlia::new().with_auto_depth();
+//!
+//! // Print "Hello, world!" in green bold with "world" underlined
+//! let formatted = dahlia.convert("&2&lHello, &nworld!");
+//!
+//! // Convenience macro to print text with println! like syntax
+//! let name = "David";
+//! dprintln!(dahlia, "&2Hello, {name}!"); // green "Hello, David!"
+//!
+//! // Remove formatting from the text with `clean`
+//! assert_eq!(dahlia.clean("&2Hello, &lworld!"), "Hello, world!");
+//!
+//! // Use `_` to escape the marker
+//! assert_eq!(dahlia.convert("&_2Hello!"), "&2Hello!");
+//! ```
+//!
+//! ## Specification
+//!
+//! The library is an implementation of the [Dahlia specification](https://github.com/dahlia-lib/spec).
+//! Below is a short summary.
 //!
 //! ## Color Format Codes
 //!
-//! Each digit/letter corresponds to a hex value (dependent on the color depth). The coloring can be applied to the background if a `~` is inserted between `&` and the code.
+//! Each digit/letter corresponds to a hex value (dependent on the color depth). The coloring can
+//! be applied to the background if a `~` is inserted between the marker and the code.
 //!
-//! Color | 3-bit | 8-bit | 24-bit
-//! --- | --- | --- | ---
-//! `0` | `#000000` | `#000000` | `#000000`
-//! `1` | `#000080` | `#0000af` | `#0000aa`
-//! `2` | `#008000` | `#00af00` | `#00aa00`
-//! `3` | `#008080` | `#00afaf` | `#00aaaa`
-//! `4` | `#800000` | `#af0000` | `#aa0000`
-//! `5` | `#800080` | `#af00af` | `#aa00aa`
-//! `6` | `#808000` | `#ffaf00` | `#ffaa00`
-//! `7` | `#c0c0c0` | `#a8a8a8` | `#aaaaaa`
-//! `8` | `#000000` | `#585858` | `#555555`
-//! `9` | `#000080` | `#afafff` | `#5555ff`
-//! `a` | `#008000` | `#5fff5f` | `#55ff55`
-//! `b` | `#000080` | `#5fffff` | `#55ffff`
-//! `c` | `#800000` | `#ff5f5f` | `#ff5555`
-//! `d` | `#800080` | `#ff5fff` | `#ff55ff`
-//! `e` | `#808000` | `#ffff5f` | `#ffff55`
-//! `f` | `#c0c0c0` | `#ffffff` | `#ffffff`
-//! `g` | `#808000` | `#d7d700` | `#ddd605`
+//! | Name       | Dahlia | ANSI 3-bit | ANSI 4-bit | ANSI 8-bit |       RGB       |    HEX    |
+//! | :--------- | :----: | :--------: | :--------: | :--------: | :-------------: | :------:  |
+//! | Black      |  `0`   |     30     |     30     |      0     |    (0, 0, 0)    | `#000000` |
+//! | Blue       |  `1`   |     34     |     34     |     19     |   (0, 0, 170)   | `#0000aa` |
+//! | Green      |  `2`   |     32     |     32     |     34     |   (0, 170, 0)   | `#00aa00` |
+//! | Cyan       |  `3`   |     36     |     36     |     37     |  (0, 170, 170)  | `#00aaaa` |
+//! | Red        |  `4`   |     31     |     31     |    124     |   (170, 0, 0)   | `#aa0000` |
+//! | Purple     |  `5`   |     35     |     35     |    127     |  (170, 0, 170)  | `#aa00aa` |
+//! | Orange     |  `6`   |     33     |     33     |    214     |  (255, 170, 0)  | `#ffaa00` |
+//! | Light gray |  `7`   |     37     |     37     |    248     | (170, 170, 170) | `#aaaaaa` |
+//! | Gray       |  `8`   |     30     |     90     |    240     |  (85, 85, 85)   | `#555555` |
+//! | Light blue |  `9`   |     34     |     94     |    147     |  (85, 85, 255)  | `#5555ff` |
+//! | Lime       |  `a`   |     32     |     92     |     83     |  (85, 255, 85)  | `#55ff55` |
+//! | Turqoise   |  `b`   |     34     |     96     |     87     | (85, 255, 255)  | `#55ffff` |
+//! | Light red  |  `c`   |     31     |     91     |    203     |  (255, 85, 85)  | `#ff5555` |
+//! | Pink       |  `d`   |     35     |     95     |    207     | (255, 85, 255)  | `#ff55ff` |
+//! | Yellow     |  `e`   |     33     |     93     |    227     | (255, 255, 85)  | `#ffff55` |
+//! | White      |  `f`   |     37     |     97     |     15     | (255, 255, 255) | `#ffffff` |
 //!
 //! ## Formatting Codes
 //!
-//! Code | Result
-//! --- | ---
-//! `l` | Bold
-//! `m` | Strikethrough
-//! `n` | Underline
-//! `o` | Italic
-//! `r` | Reset formatting
+//! | Code | Result              |
+//! | ---- | ------------------- |
+//! | `l`  | Bold                |
+//! | `m`  | Strikethrough       |
+//! | `n`  | Underline           |
+//! | `o`  | Italic              |
+//! | `R`  | Reset formatting    |
+//! | `rf` | Reset foreground    |
+//! | `rb` | Reset background    |
+//! | `rc` | Reset color         |
+//! | `rh` | Reset hidden        |
+//! | `ri` | Reset inverse       |
+//! | `rj` | Reset dim           |
+//! | `rk` | Reset blinking      |
+//! | `rl` | Reset bold          |
+//! | `rm` | Reset strikethrough |
+//! | `rn` | Reset underline     |
+//! | `ro` | Reset italic        |
 //!
 //! ## Custom Colors
 //!
 //! For colors by hex code, use square brackets containing the hex code inside of it.
 //!
-//! - Foreground: `&[#xxxxxx]`
-//! - Background: `&~[#xxxxxx]`
+//! - Foreground: `&#xxx;` or `&#xxxxxx;`
+//! - Background: `&~#xxx;` or `&~#xxxxxx;`
 //!
-//! `xxxxxx` represents the hex value of the color.
-
+//! `xxx` and `xxxxxx` represents the hex value of the color in 12/24 bits precision respectively.
 use std::{
-    env,
+    borrow::Cow,
+    char, env,
     io::{stdin, stdout, Write},
 };
 
-use lazy_static::lazy_static;
-use phf::{phf_map, Map};
 use regex::{Captures, Regex};
 
-/// Specifies usable color depth levels
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
-pub enum Depth {
-    /// 3-bit color
-    TTY = 3,
-    /// 4-bit color
-    Low = 4,
-    /// 8-bit color
-    Medium = 8,
-    /// 24-bit color (true color)
-    High = 24,
+#[cfg(test)]
+mod tests;
+
+mod consts;
+use consts::*;
+
+mod depth;
+
+pub use depth::Depth;
+
+const ESCAPE_IN_REGEX: [char; 14] = [
+    '[', ']', '(', ')', '{', '}', '*', '+', '.', '$', '^', '\\', '|', '?',
+];
+
+struct Patterns {
+    codes: Regex,
+    escaped: String,
 }
 
-const FORMATTERS: Map<&str, &str> = phf_map! {
-    "l" => "1",
-    "m" => "9",
-    "n" => "4",
-    "o" => "3",
-    "r" => "0"
-};
+impl Patterns {
+    pub fn new(marker: char) -> Self {
+        let escaped_marker = ESCAPE_IN_REGEX
+            .contains(&marker)
+            .then(|| format!(r"\{marker}"))
+            .unwrap_or_else(|| marker.to_string());
 
-const COLORS_3BIT: Map<&str, &str> = phf_map! {
-    "0" => "30",
-    "1" => "34",
-    "2" => "32",
-    "3" => "36",
-    "4" => "31",
-    "5" => "35",
-    "6" => "33",
-    "7" => "37",
-    "8" => "30",
-    "9" => "34",
-    "a" => "32",
-    "b" => "34",
-    "c" => "31",
-    "d" => "35",
-    "e" => "33",
-    "f" => "37",
-    "g" => "33"
-};
+        let regex = format!("{escaped_marker}(?:{})", *CODE_REGEX);
 
-const COLORS_4BIT: Map<&str, &str> = phf_map! {
-    "0" => "30",
-    "1" => "34",
-    "2" => "32",
-    "3" => "36",
-    "4" => "31",
-    "5" => "35",
-    "6" => "33",
-    "7" => "37",
-    "8" => "30",
-    "9" => "34",
-    "a" => "32",
-    "b" => "34",
-    "c" => "31",
-    "d" => "35",
-    "e" => "33",
-    "f" => "37",
-    "g" => "33"
-};
+        Self {
+            codes: Regex::new(&regex)
+                .expect("the pattern regex should be valid and properly escaped."),
+            escaped: format!("{marker}_"),
+        }
+    }
 
-const COLORS_8BIT: Map<&str, &str> = phf_map! {
-    "0" => "0",
-    "1" => "19",
-    "2" => "34",
-    "3" => "37",
-    "4" => "124",
-    "5" => "127",
-    "6" => "214",
-    "7" => "248",
-    "8" => "240",
-    "9" => "147",
-    "a" => "83",
-    "b" => "87",
-    "c" => "203",
-    "d" => "207",
-    "e" => "227",
-    "f" => "15",
-    "g" => "184"
-};
+    pub fn codes(&self) -> &Regex {
+        &self.codes
+    }
 
-const COLORS_24BIT: Map<&str, [&str; 3]> = phf_map! {
-    "0" => ["0", "0", "0"],
-    "1" => ["0", "0", "170"],
-    "2" => ["0", "170", "0"],
-    "3" => ["0", "170", "170"],
-    "4" => ["170", "0", "0"],
-    "5" => ["170", "0", "170"],
-    "6" => ["255", "170", "0"],
-    "7" => ["170", "170", "170"],
-    "8" => ["85", "85", "85"],
-    "9" => ["85", "85", "255"],
-    "a" => ["85", "255", "85"],
-    "b" => ["85", "255", "255"],
-    "c" => ["255", "85", "85"],
-    "d" => ["255", "85", "255"],
-    "e" => ["255", "255", "85"],
-    "f" => ["255", "255", "255"],
-    "g" => ["221", "214", "5"]
-};
-
-const FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
-    3u8 => "\x1b[{}m",
-    4u8 => "\x1b[{}m",
-    8u8 => "\x1b[38;5;{}m",
-    24u8 => "\x1b[38;2;{r};{g};{b}m"
-};
-
-const BG_FORMAT_TEMPLATES: Map<u8, &str> = phf_map! {
-    3u8 => "\x1b[{}m",
-    4u8 => "\x1b[{}m",
-    8u8 => "\x1b[48;5;{}m",
-    24u8 => "\x1b[48;2;{r};{g};{b}m"
-};
-
-const COLORS: Map<u8, &Map<&str, &str>> = phf_map! {
-    3u8 => &COLORS_3BIT,
-    4u8 => &COLORS_4BIT,
-    8u8 => &COLORS_8BIT,
-};
+    pub fn escaped(&self) -> &str {
+        &self.escaped
+    }
+}
 
 pub struct Dahlia {
-    // Specifies what ANSI color set to use (in bits)
-    depth: Depth,
+    // Specifies what ANSI color set to use (in bits). If None, convert acts as clean.
+    depth: Option<Depth>,
     // When true, doesn't add an "&r" at the end when converting strings.
-    no_reset: bool,
-    // When true, `Dahlia.convert` is equivalent to `clean`
-    no_color: bool,
-    // Regex patterns used by the Dahlia instance
-    patterns: Vec<Regex>,
+    auto_reset: bool,
+    // Search patterns used by the Dahlia instance
+    patterns: Patterns,
     // Marker used for formatting
     marker: char,
 }
 
 impl Dahlia {
-    pub fn new(depth: Depth, no_reset: bool, marker: char) -> Self {
-        let no_color = {
-            let var = env::var("NO_COLOR");
-            if let Ok(value) = var {
-                value.to_lowercase() == "true" || value == "1"
-            } else {
-                false
-            }
-        };
-        let patterns = create_patterns(marker);
-        Dahlia {
+    pub fn new(depth: Option<Depth>, auto_reset: bool, marker: char) -> Self {
+        let no_color = env::var("NO_COLOR").is_ok_and(|value| !value.is_empty());
+
+        let depth = if no_color { None } else { depth };
+
+        Self {
             depth,
-            no_reset,
-            no_color,
-            patterns,
+            auto_reset,
+            patterns: Patterns::new(marker),
             marker,
         }
+    }
+
+    pub fn with_depth(mut self, depth: Depth) -> Self {
+        self.set_depth(depth);
+        self
+    }
+
+    pub fn with_auto_depth(mut self) -> Self {
+        self.set_auto_depth();
+        self
+    }
+
+    pub fn with_auto_reset(mut self, auto_reset: bool) -> Self {
+        self.set_auto_reset(auto_reset);
+        self
+    }
+
+    pub fn with_marker(mut self, marker: char) -> Self {
+        self.set_marker(marker);
+        self
+    }
+
+    pub fn set_depth(&mut self, depth: Depth) {
+        self.depth = Some(depth);
+    }
+
+    pub fn set_auto_depth(&mut self) {
+        self.depth = Depth::try_infer();
+    }
+
+    pub fn set_auto_reset(&mut self, auto_reset: bool) {
+        self.auto_reset = auto_reset;
+    }
+
+    pub fn set_marker(&mut self, marker: char) {
+        self.marker = marker;
+        self.patterns = Patterns::new(marker);
+    }
+
+    /// Removes all Dahlia format codes from a string.
+    ///
+    /// ### Example
+    /// ```rust
+    /// # use dahlia::{Dahlia};
+    /// let dahlia = Dahlia::default().with_auto_reset(false);
+    /// let green_text = "&2>be me";
+    /// assert_eq!(dahlia.clean(green_text), ">be me");
+    /// ```
+    pub fn clean<'a>(&self, str: &'a str) -> Cow<'a, str> {
+        let converted = self.patterns.codes().replace_all(str, "");
+        self.finalize(converted)
     }
 
     /// Formats a string using the format codes.
     ///
     /// ### Example
-    /// ```rs
-    /// let dahlia = Dahlia::new(Depth::High, true);
-    /// let text = dahlia.convert("&aHello\n&cWorld");
-    /// println!("{}", text);
+    /// ```rust
+    /// # use dahlia::{Dahlia, Depth};
+    /// let dahlia = Dahlia::default().with_depth(Depth::High);
+    /// let text = dahlia.convert("&aHello &cWorld");
+    /// assert_eq!(&text, "\x1b[38;2;85;255;85mHello \x1b[38;2;255;85;85mWorld\x1b[0m");
     /// ```
-    ///
-    /// <style>
-    /// .a {
-    ///     color: #55ff55;
-    /// }
-    /// .c {
-    ///     color: #ff5555;
-    /// }
-    /// </style>
-    /// <pre>
-    /// <span class="a">Hello</span>
-    /// <span class="c">World</span>
-    /// </pre>
-    pub fn convert(&self, string: String) -> String {
-        if self.no_color {
-            return clean(string, self.marker);
+    pub fn convert<'a>(&self, str: &'a str) -> Cow<'a, str> {
+        if let Some(depth) = self.depth {
+            let replacer = |captures: &Captures<'_>| get_ansi(captures, depth);
+            let converted = self.patterns.codes().replace_all(str, replacer);
+            self.finalize(converted)
+        } else {
+            self.clean(str)
+        }
+    }
+
+    fn finalize<'a>(&self, str: Cow<'a, str>) -> Cow<'a, str> {
+        let str = if self.auto_reset && !str.ends_with("\x1b[0m") {
+            str + "\x1b[0m"
+        } else {
+            str
+        };
+
+        self.unescape(str)
+    }
+
+    fn unescape<'a>(&self, str: Cow<'a, str>) -> Cow<'a, str> {
+        // PERF: Custom String::replace implementation based on Regex::replace_all to get
+        // around 2x speed boost
+        let mut indices = str.match_indices(self.patterns.escaped()).peekable();
+
+        if indices.peek().is_none() {
+            return str;
         }
 
-        let reset = format!("{}r", self.marker);
+        let buffer = String::with_capacity(str.len());
 
-        let string = if string.ends_with(&reset) || self.no_reset {
-            string
-        } else {
-            format!("{string}{reset}")
-        };
+        let (new, last_match) = indices.fold((buffer, 0), |(acc, last_match), (start, chunk)| {
+            (
+                // accumulator + string since the previous match + the match without the _
+                acc + &str[last_match..start] + &chunk[..chunk.len() - 1],
+                start + chunk.len(),
+            )
+        });
 
-        let replacer = |captures: &Captures| {
-            let code = &captures[0];
-            let bg = &captures[1] == "~";
-            let color = &captures[2];
+        // rest of the string
+        let tail = &str[last_match..];
 
-            self.get_ansi(color, bg)
-                .unwrap_or_else(|| panic!("Invalid code: {code}"))
-        };
-
-        self.patterns.iter().fold(string, |string, pattern| {
-            pattern.replace_all(&string, replacer).into_owned()
-        })
+        Cow::Owned(new + tail)
     }
 
     /// Writes the prompt to stdout, then reads a line from input,
     /// and returns it (excluding the trailing newline).
-    pub fn input(&self, prompt: String) -> String {
+    pub fn input(&self, prompt: &str) -> std::io::Result<String> {
         print!("{}", self.convert(prompt));
-        stdout().flush().expect("Can't write to stdout");
+        stdout().flush()?;
 
         let mut inp = String::new();
-        stdin().read_line(&mut inp).expect("Can't read from stdin");
-        inp[..inp.len() - 1].into()
+        stdin().read_line(&mut inp)?;
+        Ok(inp.trim_end().to_owned())
     }
 
-    fn get_ansi(&self, code: &str, bg: bool) -> Option<String> {
-        let formats = if bg {
-            BG_FORMAT_TEMPLATES
-        } else {
-            FORMAT_TEMPLATES
-        };
+    /// Escape all format markers in a string
+    ///
+    /// # Example
+    /// ```rust
+    /// # use dahlia::Dahlia;
+    /// let d = Dahlia::default();
+    /// let str = d.escape("&aHello &cWorld");
+    /// assert_eq!(str, "&_aHello &_cWorld");
+    /// ```
+    pub fn escape(&self, str: &str) -> String {
+        str.replace(self.marker, self.patterns.escaped())
+    }
+}
 
-        if code.len() == 6 {
-            let [r, g, b] =
-                [0, 2, 4].map(|i| u8::from_str_radix(&code[i..i + 2], 16).unwrap().to_string());
+fn get_ansi(captures: &Captures<'_>, depth: Depth) -> String {
+    if let Some(format) = captures.name("fmt") {
+        return format_to_ansi(format.as_str());
+    }
 
-            Some(fill_rgb_template(formats[&24u8], &r, &g, &b))
-        } else if let Some(value) = FORMATTERS.get(code) {
-            Some(fill_template(formats[&3u8], value))
-        } else {
-            let template = formats[&(self.depth as u8)];
+    let bg = captures.name("bg").is_some();
 
-            if self.depth == Depth::High {
-                let [r, g, b] = COLORS_24BIT.get(code)?;
+    let templater = if bg {
+        fmt_background_template
+    } else {
+        fmt_template
+    };
 
-                return Some(fill_rgb_template(template, r, g, b));
-            }
+    if let Some(hex) = captures.name("hex") {
+        return hex_to_ansi(hex.as_str(), templater);
+    }
 
-            let color_map = COLORS[&(self.depth as u8)];
-            let mut value = color_map.get(code)?.to_string();
+    // if it's not a formatter or hex code, it's a color code
+    let color = &captures["color"];
 
-            if bg && self.depth <= Depth::Low {
-                value = (value.parse::<u8>().ok()? + 10).to_string()
-            };
+    if depth == Depth::High {
+        let [r, g, b] = COLORS_24BIT(color).expect("the regex should match only valid color codes");
 
-            Some(fill_template(template, &value))
+        return fill_rgb_template(templater(Depth::High), r, g, b);
+    }
+
+    let color_map = colors(depth).expect("at this point depth should only be TTY, Low or Medium");
+
+    let mapped = color_map(color).expect("the regex should match only valid color codes");
+
+    // low bit depths use different way of specifying background
+    let value = if bg && depth <= Depth::Low {
+        (mapped
+            .parse::<u8>()
+            .expect("color tables should contain valid numbers")
+            + 10)
+            .to_string()
+    } else {
+        mapped.to_string()
+    };
+
+    fill_template(templater(depth), &value)
+}
+
+fn hex_to_ansi(hex: &str, templater: fn(Depth) -> &'static str) -> String {
+    let hex_digits = hex
+        .chars()
+        .map(|ch| ch.to_digit(16))
+        .collect::<Option<Vec<_>>>()
+        .expect("the regex should only match valid hexadecimal digits");
+
+    let [r, g, b] = match &hex_digits[..] {
+        // if there are only 3 digits, "duplicate" each
+        [r, g, b] => [r, g, b].map(|&d| (0x11 * d).to_string()),
+        [r1, r2, g1, g2, b1, b2] => {
+            [(r1, r2), (g1, g2), (b1, b2)].map(|(h, l)| (h * 0x10 + l).to_string())
         }
-    }
+        _ => unreachable!("the regex should only match codes of length 3 or 6"),
+    };
 
-    /// Resets the formatting back to the default.
-    pub fn reset(&self) {
-        print!("{}", self.convert(format!("{}r", self.marker)));
-    }
-
-    /// Returns a string with all the possible formatting options.
-    pub fn test(&self) -> String {
-        self.convert(
-            "0123456789abcdefg"
-                .chars()
-                .map(|ch| format!("{m}{ch}{ch}", m = self.marker))
-                .chain(
-                    "lmno"
-                        .chars()
-                        .map(|ch| format!("{m}r{m}{ch}{ch}", m = self.marker)),
-                )
-                .collect::<String>(),
-        )
-        .to_string()
-    }
+    fill_rgb_template(templater(Depth::High), &r, &g, &b)
 }
 
-fn re(string: &str) -> Regex {
-    Regex::new(string).unwrap()
+fn format_to_ansi(format: &str) -> String {
+    use std::fmt::Write;
+
+    let ansis = formatter(format)
+        .expect("the regex should match only valid formatter codes or reset codes.");
+
+    ansis.iter().fold(
+        String::with_capacity(ansis.len() * 5), // ansi format codes are 5 chars long
+        |mut string, ansi| {
+            // writing to string can't fail, and we use it, so we get the format! capability
+            let _ = write!(string, "\x1b[{ansi}m");
+            string
+        },
+    )
 }
 
-lazy_static! {
-    static ref ANSI_REGEXES: [Regex; 3] = [
-        r"\x1b\[(\d+)m",
-        r"\x1b\[(?:3|4)8;5;(\d+)m",
-        r"\x1b\[(?:3|4)8;2;(\d+);(\d+);(\d+)m",
-    ]
-    .map(re);
-    static ref CODE_REGEXES: [&'static str; 2] =
-        [r"(~?)([0-9a-gl-or])", r"(~?)\[#([0-9a-fA-F]{6})\]"];
-}
-
-fn create_patterns(marker: char) -> Vec<Regex> {
-    CODE_REGEXES
-        .iter()
-        .map(|x| re(&format!("{marker}{x}")))
-        .collect()
+impl Default for Dahlia {
+    fn default() -> Self {
+        Dahlia::new(None, true, '&')
+    }
 }
 
 fn fill_template(template: &str, value: &str) -> String {
-    template.replace("{}", value)
+    template.replacen("{}", value, 1)
 }
 
 fn fill_rgb_template(template: &str, r: &str, g: &str, b: &str) -> String {
     template
-        .replace("{r}", r)
-        .replace("{g}", g)
-        .replace("{b}", b)
-}
-
-fn remove_all_regexes(regexes: &[Regex], string: String) -> String {
-    regexes.iter().fold(string, |string, pattern| {
-        pattern.replace_all(&string, "").into_owned()
-    })
-}
-
-/// Removes all Dahlia format codes from a string.
-///
-/// ### Example
-/// ```rs
-/// let green_text = "&2>be me";
-/// assert_eq!(clean(green_text), ">be me");
-/// ```
-pub fn clean(string: String, marker: char) -> String {
-    remove_all_regexes(&create_patterns(marker), string)
+        .replacen("{r}", r, 1)
+        .replacen("{g}", g, 1)
+        .replacen("{b}", b, 1)
 }
 
 /// Removes all ANSI codes from a string.
 ///
-/// ### Example
-/// ```rs
-/// let dahlia = Dahlia::new(Depth::High, false);
+/// # Example
+///
+/// ```rust
+/// # use dahlia::{Dahlia, Depth, clean_ansi};
+/// let pink_text = "\x1b[38;2;255;0;255mpink";
+/// assert_eq!(clean_ansi(&pink_text), "pink");
+///
+/// let dahlia = Dahlia::new(Some(Depth::High), false, '&');
 /// let green_text = dahlia.convert("&2>be me");
-/// assert_eq!(clean_ansi(green_text), ">be me");
+/// assert_eq!(clean_ansi(&green_text), ">be me");
 /// ```
-pub fn clean_ansi(string: String) -> String {
-    remove_all_regexes(&*ANSI_REGEXES, string)
+pub fn clean_ansi(string: &str) -> Cow<'_, str> {
+    ANSI_REGEX.replace_all(string, "")
 }
 
 /// Wrapper over `print!`, takes a Dahlia instance as the first argument
 /// and uses its convert method for coloring strings.
 ///
 /// ### Example
-/// ```rs
-/// let d = Dahlia::new(Depth::Low, false);
+/// ```rust
+/// # use dahlia::{Dahlia, dprint};
+/// let d = Dahlia::default();
 /// let name = "Bob";
 /// // The following two are equivalent
-/// print!("{}", d.convert(format!("Hi &3{}&r!", name));
-/// dprint!(d, "Hi &3{}&r!", name)
+/// print!("{}", d.convert(&format!("Hi &3{name}&r!")));
+/// dprint!(d, "Hi &3{name}&r!");
 /// ```
 #[macro_export]
 macro_rules! dprint {
     ($d:expr, $($arg:tt)*) => {
-        print!("{}", $d.convert(format!($($arg)*)));
+        print!("{}", $d.convert(&format!($($arg)*)));
     };
 }
 
@@ -409,89 +426,17 @@ macro_rules! dprint {
 /// and uses its convert method for coloring strings.
 ///
 /// ### Example
-/// ```rs
-/// let d = Dahlia::new(Depth::Low, false);
+/// ```rust
+/// # use dahlia::{Dahlia, dprintln};
+/// let d = Dahlia::default();
 /// let name = "Bob";
 /// // The following two are equivalent
-/// println!("{}", d.convert(format!("Hi &3{}&r!", name));
-/// dprintln!(d, "Hi &3{}&r!", name)
+/// println!("{}", d.convert(&format!("Hi &3{name}&r!")));
+/// dprintln!(d, "Hi &3{name}&r!");
 /// ```
 #[macro_export]
 macro_rules! dprintln {
     ($d:expr, $($arg:tt)*) => {
-        println!("{}", $d.convert(format!($($arg)*)));
+        println!("{}", $d.convert(&format!($($arg)*)));
     };
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_clean() {
-        assert_eq!(clean("hmm &3&oyes&r.".into(), '&'), "hmm yes.")
-    }
-
-    #[test]
-    fn test_clean_custom_marker() {
-        assert_eq!(clean("i'm !4!lballing!r!".into(), '!'), "i'm balling!")
-    }
-
-    #[test]
-    fn test_clean_ansi() {
-        assert_eq!(
-            clean_ansi("hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m".into()),
-            "hmm yes."
-        )
-    }
-
-    #[test]
-    fn test_convert() {
-        let dahlia = Dahlia::new(Depth::High, false, '&');
-
-        assert_eq!(
-            dahlia.convert("hmm &3&oyes&r.".into()),
-            "hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m"
-        )
-    }
-
-    #[test]
-    fn test_convert_with_background() {
-        let dahlia = Dahlia::new(Depth::High, false, '&');
-
-        assert_eq!(
-            dahlia.convert("hmm &~3yes&r.".into()),
-            "hmm \x1b[48;2;0;170;170myes\x1b[0m.\x1b[0m"
-        )
-    }
-
-    #[test]
-    fn test_convert_custom_marker() {
-        let dahlia = Dahlia::new(Depth::High, false, '@');
-
-        assert_eq!(
-            dahlia.convert("hmm @3@oyes@r.".into()),
-            "hmm \x1b[38;2;0;170;170m\x1b[3myes\x1b[0m.\x1b[0m"
-        )
-    }
-
-    #[test]
-    fn test_test() {
-        let dahlia = Dahlia::new(Depth::High, false, '&');
-
-        let test = dahlia.test();
-
-        assert_eq!(test, "\x1b[38;2;0;0;0m0\x1b[38;2;0;0;170m1\x1b[38;2;0;170;0m2\x1b[38;2;0;170;170m3\x1b[38;2;170;0;0m4\x1b[38;2;170;0;170m5\x1b[38;2;255;170;0m6\x1b[38;2;170;170;170m7\x1b[38;2;85;85;85m8\x1b[38;2;85;85;255m9\x1b[38;2;85;255;85ma\x1b[38;2;85;255;255mb\x1b[38;2;255;85;85mc\x1b[38;2;255;85;255md\x1b[38;2;255;255;85me\x1b[38;2;255;255;255mf\x1b[38;2;221;214;5mg\x1b[0m\x1b[1ml\x1b[0m\x1b[9mm\x1b[0m\x1b[4mn\x1b[0m\x1b[3mo\x1b[0m")
-    }
-
-    #[test]
-    fn test_macros() {
-        // no output testing, just for compilation check
-
-        let dahlia = Dahlia::new(Depth::High, false, '&');
-        let name = "Bob";
-
-        dprint!(dahlia, "Hi &3{}&r!", name);
-        dprintln!(dahlia, "Hi &3{}&r!", name);
-    }
 }
