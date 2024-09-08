@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.0] - 2024-09-08
 
 This release follows the [Dahlia Specification v1.0.0][spec].
+Huge thanks to [@Maneren](https://github.com/Maneren) for help!
 
 ### Added
 
