@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-dahlia = "1.1"
+dahlia = "2.0"
 ```
 
 Import and use like this:
