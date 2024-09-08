@@ -22,7 +22,7 @@ Import and use like this:
 use dahlia::{Dahlia, dprintln};
 
 fn main() {
-  let dahlia = Dahlia::new().with_auto_depth();
+  let dahlia = Dahlia::default().with_auto_depth();
 
   // Print "Hello, world!" in green bold with "world!" underlined
   let formatted = dahlia.convert("&2&lHello, &nworld!");
