@@ -1,3 +1,5 @@
+[![Dahlia spec](https://img.shields.io/badge/Dahlia%20spec-v1.1-pink?style=flat)](https://github.com/dahlia-lib/spec)
+
 # Dahlia.rs
 
 A Rust implementation of [Dahlia](https://github.com/dahlia-lib/spec) — a simple
